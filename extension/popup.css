@@ -594,15 +594,29 @@ body {
 }
 
 /* US-012: Save Confirmation */
+/* TASK-051: Enhanced save confirmation with multiple states */
 .save-confirmation {
-  background: var(--color-success);
-  color: white;
   padding: var(--spacing-md);
   border-radius: 8px;
   text-align: center;
   font-weight: 500;
   margin-top: var(--spacing-md);
   animation: slideDown var(--transition-base);
+}
+
+.save-confirmation.success {
+  background: var(--color-success);
+  color: white;
+}
+
+.save-confirmation.warning {
+  background: var(--color-warning);
+  color: white;
+}
+
+.save-confirmation.error {
+  background: var(--color-error);
+  color: white;
 }
 
 .save-confirmation.hidden {

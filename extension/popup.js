@@ -56,37 +56,99 @@ function showState(stateId) {
 
 /**
  * US-012: Load settings from chrome.storage.sync
+ * TASK-048: Implement settings load on init
+ * TASK-049: Add error handling with fallback
  */
 async function loadSettings() {
   try {
+    // US-012: Try chrome.storage.sync first (syncs across devices)
     const stored = await chrome.storage.sync.get(['language', 'tone']);
     
     settings = {
-      language: stored.language || 'en',
-      tone: stored.tone || 'simple'
+      language: stored.language || 'en', // US-010: Default English
+      tone: stored.tone || 'simple' // US-011: Default Simple
     };
     
-    console.log('[ExplainIt] Settings loaded:', settings);
+    console.log('[ExplainIt] Settings loaded from sync storage:', settings);
     updateSettingsUI();
   } catch (error) {
-    console.error('[ExplainIt] Error loading settings:', error);
-    // Use defaults
+    console.error('[ExplainIt] Error loading from sync storage:', error);
+    
+    // TASK-049: Fallback to local storage
+    try {
+      const localStored = await chrome.storage.local.get(['language', 'tone']);
+      settings = {
+        language: localStored.language || 'en',
+        tone: localStored.tone || 'simple'
+      };
+      console.log('[ExplainIt] Settings loaded from local storage (fallback):', settings);
+      updateSettingsUI();
+    } catch (localError) {
+      console.error('[ExplainIt] Error loading from local storage:', localError);
+      // Use hardcoded defaults
+      settings = { language: 'en', tone: 'simple' };
+      console.log('[ExplainIt] Using default settings');
+    }
   }
 }
 
 /**
  * US-012: Save settings to chrome.storage.sync
+ * TASK-047: Implement chrome.storage.sync save
+ * TASK-049: Add error handling with fallback
+ * TASK-050: Add validation before save
  */
 async function saveSettings(newSettings) {
+  // TASK-050: Validate settings before saving
+  if (!validateSettings(newSettings)) {
+    console.error('[ExplainIt] Invalid settings:', newSettings);
+    return { success: false, error: 'Invalid settings values' };
+  }
+  
   try {
+    // US-012: Try chrome.storage.sync first (syncs across devices)
     await chrome.storage.sync.set(newSettings);
     settings = { ...settings, ...newSettings };
-    console.log('[ExplainIt] Settings saved:', settings);
-    return true;
+    console.log('[ExplainIt] Settings saved to sync storage:', settings);
+    return { success: true };
   } catch (error) {
-    console.error('[ExplainIt] Error saving settings:', error);
+    console.error('[ExplainIt] Error saving to sync storage:', error);
+    
+    // TASK-049: Fallback to local storage
+    try {
+      await chrome.storage.local.set(newSettings);
+      settings = { ...settings, ...newSettings };
+      console.log('[ExplainIt] Settings saved to local storage (fallback):', settings);
+      return { success: true, fallback: true };
+    } catch (localError) {
+      console.error('[ExplainIt] Error saving to local storage:', localError);
+      return { success: false, error: 'Failed to save settings' };
+    }
+  }
+}
+
+/**
+ * TASK-050: Validate settings before saving
+ * US-010: Validate language (en, ru)
+ * US-011: Validate tone (simple, kid, expert)
+ */
+function validateSettings(newSettings) {
+  const validLanguages = ['en', 'ru'];
+  const validTones = ['simple', 'kid', 'expert'];
+  
+  // Check if language is provided and valid
+  if (newSettings.language && !validLanguages.includes(newSettings.language)) {
+    console.error('[ExplainIt] Invalid language:', newSettings.language);
     return false;
   }
+  
+  // Check if tone is provided and valid
+  if (newSettings.tone && !validTones.includes(newSettings.tone)) {
+    console.error('[ExplainIt] Invalid tone:', newSettings.tone);
+    return false;
+  }
+  
+  return true;
 }
 
 /**
@@ -102,38 +164,62 @@ function updateSettingsUI() {
 
 /**
  * US-012: Show save confirmation
+ * TASK-051: Add save confirmation UI
+ * @param {string} type - 'saved', 'saved-local', or 'error'
+ * @param {string} errorMessage - Optional error message
  */
-function showSaveConfirmation() {
+function showSaveConfirmation(type = 'saved', errorMessage = null) {
   const confirmation = document.getElementById('save-confirmation');
-  if (confirmation) {
-    confirmation.classList.remove('hidden');
-    setTimeout(() => {
-      confirmation.classList.add('hidden');
-    }, 2000);
+  if (!confirmation) return;
+  
+  // Update message based on type
+  if (type === 'saved') {
+    confirmation.textContent = '✓ Settings saved successfully!';
+    confirmation.className = 'save-confirmation success';
+  } else if (type === 'saved-local') {
+    confirmation.textContent = '✓ Settings saved locally (sync unavailable)';
+    confirmation.className = 'save-confirmation warning';
+  } else if (type === 'error') {
+    confirmation.textContent = `⚠ Failed to save: ${errorMessage || 'Unknown error'}`;
+    confirmation.className = 'save-confirmation error';
   }
+  
+  confirmation.classList.remove('hidden');
+  
+  setTimeout(() => {
+    confirmation.classList.add('hidden');
+  }, 2000);
 }
 
 /**
  * TASK-019: Setup event listeners
  */
 function setupEventListeners() {
-  // Settings button (Result screen → Settings screen)
+  // US-009: Settings button (Result screen → Settings screen)
+  // TASK-037: Pre-populate current settings when opening
   const settingsBtn = document.getElementById('settings-btn');
   if (settingsBtn) {
     settingsBtn.addEventListener('click', () => {
+      // US-009: Pre-populate form with current settings
+      updateSettingsUI();
       showScreen('settings');
+      console.log('[ExplainIt] Settings screen opened with current values');
     });
   }
   
-  // Back button (Settings screen → Result screen)
+  // US-009: Back button (Settings screen → Result screen)
+  // TASK-038: Add back button logic (returns without saving)
   const backBtn = document.getElementById('back-btn');
   if (backBtn) {
     backBtn.addEventListener('click', () => {
+      // US-009: Return without saving - reload form with current saved settings
+      updateSettingsUI();
       showScreen('result');
+      console.log('[ExplainIt] Returned to result screen without saving');
     });
   }
   
-  // Settings form submit
+  // US-009/010/011/012: Settings form submit
   const settingsForm = document.getElementById('settings-form');
   if (settingsForm) {
     settingsForm.addEventListener('submit', async (e) => {
@@ -141,20 +227,32 @@ function setupEventListeners() {
       
       const languageSelect = document.getElementById('language-select');
       const toneSelect = document.getElementById('tone-select');
+      const saveBtn = document.getElementById('save-btn');
       
       const newSettings = {
         language: languageSelect.value,
         tone: toneSelect.value
       };
       
-      const saved = await saveSettings(newSettings);
+      // Disable button during save
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
       
-      if (saved) {
-        showSaveConfirmation();
-        // Return to result screen after a short delay
+      // US-012: Save settings with validation and error handling
+      const result = await saveSettings(newSettings);
+      
+      if (result.success) {
+        // TASK-051: Show success confirmation
+        showSaveConfirmation(result.fallback ? 'saved-local' : 'saved');
+        // US-009: Return to result screen after confirmation
         setTimeout(() => {
           showScreen('result');
         }, 1500);
+      } else {
+        // TASK-049: Show error message
+        showSaveConfirmation('error', result.error);
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Settings';
       }
     });
   }
@@ -593,9 +691,12 @@ if (typeof module !== 'undefined' && module.exports) {
     showState,
     loadSettings,
     saveSettings,
+    validateSettings,
     showLoadingState,
     hideLoadingState,
     fetchExplanation,
-    showResult
+    showResult,
+    updateSettingsUI,
+    showSaveConfirmation
   };
 }
