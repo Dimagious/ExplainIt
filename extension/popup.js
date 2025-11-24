@@ -256,7 +256,7 @@ function hideLoadingState() {
 }
 
 /**
- * US-006: Simulate API request with AbortController
+ * US-006/007: Simulate API request with AbortController
  * TODO: Replace with actual API call in US-019
  */
 async function fetchExplanation(text) {
@@ -278,9 +278,20 @@ async function fetchExplanation(text) {
       });
     });
     
-    // Simulate response
+    // US-007: Simulate realistic response with formatting
+    const explanations = [
+      `This is a detailed explanation of the selected text.\n\nThe text appears to be about demonstrating the loading state functionality. Here's what it means:\n\n1. First, it shows how the system handles user input\n2. Then, it demonstrates the preview feature\n3. Finally, it displays the result after processing\n\nThis functionality is crucial for providing good user experience, as it keeps users informed about what's happening in the background.`,
+      
+      `Let me explain this in simple terms:\n\nThe selected text is demonstrating how our extension works. When you select text, the extension captures it and sends it for processing.\n\nKey points:\n• The loading state shows you that something is happening\n• The preview helps you confirm the right text was selected\n• The result appears after a short delay\n\nThis creates a smooth and intuitive user experience.`,
+      
+      `Quick explanation:\n\nThis text describes a test functionality. It simulates the process of:\n\n- Capturing selected text\n- Showing a loading indicator\n- Displaying a preview\n- Returning the final result\n\nThe delay is intentional to demonstrate the loading state behavior.`
+    ];
+    
+    // Pick a random explanation
+    const randomExplanation = explanations[Math.floor(Math.random() * explanations.length)];
+    
     return {
-      result: `This is a simulated explanation for: "${text.substring(0, 50)}..."`
+      result: randomExplanation
     };
   } catch (error) {
     if (error.name === 'AbortError') {
@@ -307,7 +318,56 @@ async function checkForSelectedText() {
 }
 
 /**
- * US-006: Test loading state (TEMP - for demo purposes)
+ * US-007: Display explanation result
+ * TASK-028: Implement text rendering logic
+ * TASK-030: Add settings badge
+ */
+function showResult(originalText, explanation, usedSettings = null) {
+  console.log('[ExplainIt] Showing result');
+  
+  // Use current settings if not provided
+  const resultSettings = usedSettings || settings;
+  
+  // TASK-027: Populate original text
+  const originalTextElement = document.getElementById('original-text-content');
+  if (originalTextElement) {
+    // Show first 100 characters for context
+    const truncatedOriginal = originalText.length > 100
+      ? originalText.substring(0, 100) + '...'
+      : originalText;
+    originalTextElement.textContent = truncatedOriginal;
+  }
+  
+  // TASK-028: Populate explanation with preserved formatting
+  const explanationElement = document.getElementById('explanation-content');
+  if (explanationElement) {
+    // Preserve line breaks and formatting
+    explanationElement.textContent = explanation;
+  }
+  
+  // TASK-030: Update settings badge
+  const settingsBadge = document.getElementById('settings-badge');
+  if (settingsBadge) {
+    const languageEmoji = resultSettings.language === 'ru' ? '🇷🇺' : '🇬🇧';
+    const languageName = resultSettings.language === 'ru' ? 'Russian' : 'English';
+    
+    const toneMap = {
+      simple: 'Simple words',
+      kid: "Like I'm 5",
+      expert: 'Expert level'
+    };
+    const toneName = toneMap[resultSettings.tone] || 'Simple words';
+    
+    settingsBadge.textContent = `${languageEmoji} ${languageName} • ${toneName}`;
+  }
+  
+  // Hide loading and show result state
+  hideLoadingState();
+  showState('result');
+}
+
+/**
+ * US-006/007: Test loading state and result display (TEMP - for demo purposes)
  * TODO: Remove in US-022 when real flow is implemented
  */
 async function testLoadingState() {
@@ -322,13 +382,12 @@ async function testLoadingState() {
     // Simulate API call
     const response = await fetchExplanation(testText);
     
-    // Hide loading state
-    hideLoadingState();
-    
-    // Show result (US-007 will implement this properly)
-    console.log('[ExplainIt] Explanation received:', response);
-    // For now, just show empty state
-    showState('empty');
+    // US-007: Show result instead of empty state
+    showResult(
+      testText,
+      response.result,
+      settings
+    );
   } catch (error) {
     if (error.name !== 'AbortError') {
       hideLoadingState();
@@ -336,6 +395,18 @@ async function testLoadingState() {
       showState('empty');
     }
   }
+}
+
+/**
+ * US-007: Test result display directly (TEMP - for demo purposes)
+ * Skip loading state and show result immediately
+ */
+function testResult() {
+  const testText = 'The quick brown fox jumps over the lazy dog. This is a pangram sentence that contains every letter of the English alphabet at least once.';
+  const testExplanation = `This is a detailed explanation with multiple paragraphs.\n\nThe sentence "The quick brown fox jumps over the lazy dog" is a famous pangram - a sentence that uses every letter of the English alphabet at least once.\n\nKey points:\n• It's often used for font testing\n• Contains all 26 letters\n• Easy to remember\n• Commonly used in typing practice\n\nThis makes it a perfect example for testing text display functionality, including:\n\n1. Line break preservation\n2. Paragraph spacing\n3. Scrollable content handling\n4. Text formatting\n\nThe result you see demonstrates how the explanation is rendered with proper formatting and readability.`;
+  
+  console.log('[ExplainIt] Testing result display...');
+  showResult(testText, testExplanation, settings);
 }
 
 /**
@@ -356,10 +427,11 @@ async function init() {
   // Check for selected text
   await checkForSelectedText();
   
-  // US-006: Add test button to console for loading state demo
-  // Type `testLoadingState()` in console to see the loading state
+  // US-006/007: Add test functions to console for demo
   window.testLoadingState = testLoadingState;
-  console.log('[ExplainIt] Popup ready. Type testLoadingState() in console to test loading state.');
+  window.testResult = testResult;
+  console.log('[ExplainIt] Popup ready.');
+  console.log('Test functions: testLoadingState(), testResult()');
 }
 
 /**
@@ -387,6 +459,7 @@ if (typeof module !== 'undefined' && module.exports) {
     saveSettings,
     showLoadingState,
     hideLoadingState,
-    fetchExplanation
+    fetchExplanation,
+    showResult
   };
 }

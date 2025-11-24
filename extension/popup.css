@@ -322,6 +322,21 @@ body {
 }
 
 /* US-007: Result Display */
+#result-state {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .section-label {
   font-size: var(--font-size-sm);
   font-weight: 600;
@@ -346,22 +361,34 @@ body {
   max-height: 80px;
   overflow: hidden;
   text-overflow: ellipsis;
+  word-wrap: break-word;
 }
 
 .explanation {
   margin-bottom: var(--spacing-lg);
 }
 
+/* TASK-028: Text rendering with proper formatting */
+/* TASK-029: Scrollable container (max 400px) */
 .explanation-content {
   color: var(--color-text);
+  font-size: var(--font-size-base);
   line-height: 1.8;
-  white-space: pre-wrap;
+  white-space: pre-wrap; /* Preserve line breaks and formatting */
   word-wrap: break-word;
-  max-height: 300px;
+  max-height: 400px; /* TASK-029: Max height before scroll */
   overflow-y: auto;
   padding-right: var(--spacing-sm);
 }
 
+/* Better readability for formatted text */
+.explanation-content:empty::before {
+  content: 'No explanation available';
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* TASK-029: Custom scrollbar for explanation */
 .explanation-content::-webkit-scrollbar {
   width: 6px;
 }
@@ -386,11 +413,25 @@ body {
   align-items: center;
   padding-top: var(--spacing-md);
   border-top: 1px solid var(--color-border);
+  gap: var(--spacing-md);
 }
 
+/* TASK-030: Settings badge showing language and tone */
 .settings-badge {
   font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  padding: 4px 10px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.settings-badge:empty {
+  display: none;
 }
 
 /* US-025/026: Error State */
