@@ -137,3 +137,20 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# bmad
+.bmad
+.bmad-core
+.cursor
+web-bundles
+
+# Chrome Extension
+extension/*.crx
+extension/*.pem
+extension/*.zip
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
