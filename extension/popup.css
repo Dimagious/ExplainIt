@@ -416,6 +416,13 @@ body {
   gap: var(--spacing-md);
 }
 
+.footer-left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  flex: 1;
+}
+
 /* TASK-030: Settings badge showing language and tone */
 .settings-badge {
   font-size: var(--font-size-sm);
@@ -432,6 +439,28 @@ body {
 
 .settings-badge:empty {
   display: none;
+}
+
+/* US-008: Copy option checkbox */
+.copy-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.copy-option input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+.copy-option:hover {
+  color: var(--color-text);
 }
 
 /* US-025/026: Error State */
@@ -485,6 +514,24 @@ body {
 
 .btn-secondary:hover {
   background: var(--color-border);
+}
+
+/* US-008: Copy button states */
+.btn-secondary.success {
+  background: var(--color-success);
+  color: white;
+  border-color: var(--color-success);
+}
+
+.btn-secondary.error {
+  background: var(--color-error);
+  color: white;
+  border-color: var(--color-error);
+}
+
+.btn-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.9;
 }
 
 .btn-full {

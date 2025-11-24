@@ -176,12 +176,148 @@ function setupEventListeners() {
 
 /**
  * US-008: Copy explanation to clipboard
- * TODO: Implement actual copy logic
+ * TASK-031: Implement Clipboard API
+ * TASK-032: Add fallback copy method
+ * TASK-034: Add button state transitions
  */
-function handleCopy() {
+async function handleCopy() {
   console.log('[ExplainIt] Copy button clicked');
-  // TODO: US-008 - Implement clipboard functionality
-  alert('Copy functionality will be implemented in US-008');
+  
+  const copyBtn = document.getElementById('copy-btn');
+  const explanationElement = document.getElementById('explanation-content');
+  const originalTextElement = document.getElementById('original-text-content');
+  const includeOriginalCheckbox = document.getElementById('include-original');
+  
+  if (!explanationElement) {
+    console.error('[ExplainIt] No explanation content found');
+    return;
+  }
+  
+  let textToCopy = '';
+  
+  // Check if user wants to include original text
+  if (includeOriginalCheckbox && includeOriginalCheckbox.checked && originalTextElement) {
+    const originalText = originalTextElement.textContent;
+    const explanation = explanationElement.textContent;
+    
+    // Format with clear separation
+    textToCopy = `Original text:\n${originalText}\n\n---\n\nExplanation:\n${explanation}`;
+    console.log('[ExplainIt] Copying with original text');
+  } else {
+    textToCopy = explanationElement.textContent;
+    console.log('[ExplainIt] Copying explanation only');
+  }
+  
+  if (!textToCopy || textToCopy.trim() === '') {
+    console.error('[ExplainIt] No text to copy');
+    return;
+  }
+  
+  try {
+    // TASK-031: Try modern Clipboard API first
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(textToCopy);
+      console.log('[ExplainIt] Text copied using Clipboard API');
+    } else {
+      // TASK-032: Fallback to execCommand for older browsers
+      await fallbackCopy(textToCopy);
+      console.log('[ExplainIt] Text copied using fallback method');
+    }
+    
+    // TASK-034: Update button state to show success
+    showCopySuccess(copyBtn);
+  } catch (error) {
+    console.error('[ExplainIt] Failed to copy:', error);
+    showCopyError(copyBtn);
+  }
+}
+
+/**
+ * TASK-032: Fallback copy method using execCommand
+ */
+function fallbackCopy(text) {
+  return new Promise((resolve, reject) => {
+    try {
+      // Create a temporary textarea
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.top = '0';
+      textarea.style.left = '-9999px';
+      textarea.setAttribute('readonly', '');
+      
+      document.body.appendChild(textarea);
+      
+      // Select and copy
+      textarea.select();
+      textarea.setSelectionRange(0, text.length);
+      
+      const successful = document.execCommand('copy');
+      
+      // Clean up
+      document.body.removeChild(textarea);
+      
+      if (successful) {
+        resolve();
+      } else {
+        reject(new Error('execCommand failed'));
+      }
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+/**
+ * TASK-034: Show success state on copy button
+ */
+function showCopySuccess(button) {
+  if (!button) return;
+  
+  // Save original content
+  const originalHTML = button.innerHTML;
+  
+  // Change to success state
+  button.innerHTML = `
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M13.485 1.929a1 1 0 011.414 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L6.07 9.1l7.415-7.171z"/>
+    </svg>
+    Copied!
+  `;
+  button.classList.add('success');
+  button.disabled = true;
+  
+  // Revert after 2 seconds
+  setTimeout(() => {
+    button.innerHTML = originalHTML;
+    button.classList.remove('success');
+    button.disabled = false;
+  }, 2000);
+}
+
+/**
+ * TASK-034: Show error state on copy button
+ */
+function showCopyError(button) {
+  if (!button) return;
+  
+  const originalHTML = button.innerHTML;
+  
+  button.innerHTML = `
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+      <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
+    </svg>
+    Failed
+  `;
+  button.classList.add('error');
+  button.disabled = true;
+  
+  setTimeout(() => {
+    button.innerHTML = originalHTML;
+    button.classList.remove('error');
+    button.disabled = false;
+  }, 2000);
 }
 
 /**
