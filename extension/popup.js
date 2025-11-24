@@ -1,14 +1,18 @@
 /**
  * ExplainIt! Popup Script
  * US-005: Popup Structure & Layout
+ * US-006: Loading State UI
  */
 
 // State
 let currentScreen = 'result';
+let currentState = 'empty';
 let settings = {
   language: 'en',
   tone: 'simple'
 };
+let loadingTimeoutId = null;
+let abortController = null;
 
 /**
  * TASK-021: Screen switching logic
@@ -29,8 +33,14 @@ function showScreen(screenId) {
 
 /**
  * TASK-021: Show different states in result screen
+ * US-006: Enhanced with loading state cleanup
  */
 function showState(stateId) {
+  // If transitioning away from loading state, clean it up
+  if (currentState === 'loading' && stateId !== 'loading') {
+    hideLoadingState();
+  }
+  
   const states = document.querySelectorAll('.content-section');
   states.forEach(state => {
     state.classList.add('hidden');
@@ -39,6 +49,7 @@ function showState(stateId) {
   const targetState = document.getElementById(`${stateId}-state`);
   if (targetState) {
     targetState.classList.remove('hidden');
+    currentState = stateId;
     console.log('[ExplainIt] Showing state:', stateId);
   }
 }
@@ -184,6 +195,106 @@ function handleRetry() {
 }
 
 /**
+ * US-006: Show loading state with text preview
+ * TASK-024: Implement loading state HTML
+ * TASK-025: Add selected text preview
+ */
+function showLoadingState(selectedText = '') {
+  console.log('[ExplainIt] Showing loading state');
+  
+  // Show loading state
+  showState('loading');
+  
+  // TASK-025: Display text preview (first 100 characters)
+  const textPreview = document.getElementById('text-preview');
+  if (textPreview && selectedText) {
+    const truncatedText = selectedText.length > 100 
+      ? selectedText.substring(0, 100) + '...' 
+      : selectedText;
+    textPreview.textContent = truncatedText;
+  }
+  
+  // TASK-026: Show timeout warning after 3 seconds
+  clearTimeout(loadingTimeoutId);
+  loadingTimeoutId = setTimeout(() => {
+    const timeoutWarning = document.getElementById('timeout-warning');
+    if (timeoutWarning) {
+      timeoutWarning.classList.remove('hidden');
+      console.log('[ExplainIt] Timeout warning displayed');
+    }
+  }, 3000);
+}
+
+/**
+ * US-006: Hide loading state and clear timers
+ */
+function hideLoadingState() {
+  console.log('[ExplainIt] Hiding loading state');
+  
+  // Clear timeout warning timer
+  clearTimeout(loadingTimeoutId);
+  loadingTimeoutId = null;
+  
+  // Hide timeout warning
+  const timeoutWarning = document.getElementById('timeout-warning');
+  if (timeoutWarning) {
+    timeoutWarning.classList.add('hidden');
+  }
+  
+  // Clear text preview
+  const textPreview = document.getElementById('text-preview');
+  if (textPreview) {
+    textPreview.textContent = '';
+  }
+  
+  // Abort any pending requests
+  if (abortController) {
+    abortController.abort();
+    abortController = null;
+    console.log('[ExplainIt] Pending request aborted');
+  }
+}
+
+/**
+ * US-006: Simulate API request with AbortController
+ * TODO: Replace with actual API call in US-019
+ */
+async function fetchExplanation(text) {
+  console.log('[ExplainIt] Fetching explanation for:', text);
+  
+  // Create AbortController for cancellable request
+  abortController = new AbortController();
+  
+  try {
+    // TODO: US-019 - Replace with actual backend API call
+    // For now, simulate a delay
+    await new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(resolve, 2000);
+      
+      // Listen for abort signal
+      abortController.signal.addEventListener('abort', () => {
+        clearTimeout(timeoutId);
+        reject(new DOMException('Request was aborted', 'AbortError'));
+      });
+    });
+    
+    // Simulate response
+    return {
+      result: `This is a simulated explanation for: "${text.substring(0, 50)}..."`
+    };
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      console.log('[ExplainIt] Request was cancelled');
+      throw error;
+    }
+    console.error('[ExplainIt] Error fetching explanation:', error);
+    throw error;
+  } finally {
+    abortController = null;
+  }
+}
+
+/**
  * US-022: Check for selected text from content script
  * TODO: Implement in US-022
  */
@@ -193,6 +304,38 @@ async function checkForSelectedText() {
   
   // For now, show empty state
   showState('empty');
+}
+
+/**
+ * US-006: Test loading state (TEMP - for demo purposes)
+ * TODO: Remove in US-022 when real flow is implemented
+ */
+async function testLoadingState() {
+  const testText = 'This is a test text to demonstrate the loading state functionality. It should show a preview and then display a result after a simulated delay.';
+  
+  console.log('[ExplainIt] Testing loading state...');
+  
+  // Show loading state with preview
+  showLoadingState(testText);
+  
+  try {
+    // Simulate API call
+    const response = await fetchExplanation(testText);
+    
+    // Hide loading state
+    hideLoadingState();
+    
+    // Show result (US-007 will implement this properly)
+    console.log('[ExplainIt] Explanation received:', response);
+    // For now, just show empty state
+    showState('empty');
+  } catch (error) {
+    if (error.name !== 'AbortError') {
+      hideLoadingState();
+      console.error('[ExplainIt] Error:', error);
+      showState('empty');
+    }
+  }
 }
 
 /**
@@ -213,8 +356,20 @@ async function init() {
   // Check for selected text
   await checkForSelectedText();
   
-  console.log('[ExplainIt] Popup ready');
+  // US-006: Add test button to console for loading state demo
+  // Type `testLoadingState()` in console to see the loading state
+  window.testLoadingState = testLoadingState;
+  console.log('[ExplainIt] Popup ready. Type testLoadingState() in console to test loading state.');
 }
+
+/**
+ * US-006: Cleanup on popup close
+ * Ensures pending requests are aborted when popup is closed
+ */
+window.addEventListener('unload', () => {
+  console.log('[ExplainIt] Popup closing, cleaning up...');
+  hideLoadingState();
+});
 
 // Run initialization when DOM is ready
 if (document.readyState === 'loading') {
@@ -229,6 +384,9 @@ if (typeof module !== 'undefined' && module.exports) {
     showScreen,
     showState,
     loadSettings,
-    saveSettings
+    saveSettings,
+    showLoadingState,
+    hideLoadingState,
+    fetchExplanation
   };
 }
