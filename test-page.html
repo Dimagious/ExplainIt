@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ExplainIt! Test Page</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1 {
+      color: #4A90E2;
+    }
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .short-text {
+      background: #fff3cd;
+      padding: 5px;
+    }
+    .long-text {
+      background: #d1ecf1;
+      padding: 10px;
+    }
+    iframe {
+      width: 100%;
+      height: 200px;
+      border: 2px solid #4A90E2;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>ExplainIt! Test Page</h1>
+  
+  <div class="test-section">
+    <h2>Test 1: Valid Selection (≥3 chars)</h2>
+    <p>
+      Select this text to test the extension. This paragraph contains enough characters 
+      to trigger the text selection detection. Try selecting different parts!
+    </p>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 2: Short Selection (&lt;3 chars)</h2>
+    <p>
+      Try selecting just <span class="short-text">a</span> or 
+      <span class="short-text">ab</span> - should NOT trigger.
+    </p>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 3: Long Selection (>2000 chars)</h2>
+    <div class="long-text">
+      <p><strong>Select all this text to test truncation:</strong></p>
+      <p>
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor 
+        incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud 
+        exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute 
+        irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla 
+        pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia 
+        deserunt mollit anim id est laborum.
+      </p>
+      <p>
+        Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque 
+        laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi 
+        architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas 
+        sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione 
+        voluptatem sequi nesciunt.
+      </p>
+      <p>
+        At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium 
+        voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint 
+        occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt 
+        mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est 
+        et expedita distinctio.
+      </p>
+      <p>
+        Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo 
+        minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis 
+        dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum 
+        necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non 
+        recusandae. Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis 
+        voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat.
+      </p>
+      <p>
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor 
+        incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud 
+        exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute 
+        irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla 
+        pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia 
+        deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error 
+        sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae 
+        ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+      </p>
+      <p>
+        Continue selecting more text to reach 2000+ characters... Lorem ipsum dolor sit amet, 
+        consectetur adipiscing elit. Nemo enim ipsam voluptatem quia voluptas sit aspernatur 
+        aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem 
+        sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, 
+        consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut 
+        labore et dolore magnam aliquam quaerat voluptatem.
+      </p>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 4: Selection in IFrame</h2>
+    <p>The text below is inside an iframe:</p>
+    <iframe srcdoc="<html><body style='padding:20px;font-family:Arial'><h3>IFrame Content</h3><p>Try selecting this text inside the iframe. The content script should detect it!</p><p>This tests TASK-004: Handle iframe selections.</p></body></html>"></iframe>
+  </div>
+  
+  <div class="test-section">
+    <h2>How to Test</h2>
+    <ol>
+      <li>Open Chrome DevTools (F12) and go to Console tab</li>
+      <li>Select text in each test section</li>
+      <li>Check console for ExplainIt! logs:
+        <ul>
+          <li>"Text selected" - for valid selections (≥3 chars)</li>
+          <li>"Selection too short" - for &lt;3 chars</li>
+          <li>"Selection truncated" - for &gt;2000 chars</li>
+        </ul>
+      </li>
+      <li>Verify iframe detection works</li>
+    </ol>
+  </div>
+  
+  <div class="test-section">
+    <h2>✅ Acceptance Criteria Checklist</h2>
+    <ul>
+      <li>☐ Detects selection of ≥3 characters</li>
+      <li>☐ Ignores selection of &lt;3 characters</li>
+      <li>☐ Truncates selection &gt;2000 characters</li>
+      <li>☐ Clears selection on deselect (click elsewhere)</li>
+      <li>☐ Works in iframes</li>
+      <li>☐ Logs appear in console</li>
+    </ul>
+  </div>
+</body>
+</html>
+
