@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop, feature/** ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint-and-build:
+    name: Lint and Build
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci
+      
+      - name: Lint backend code
+        run: |
+          cd backend
+          npm run lint
+      
+      - name: Check backend formatting
+        run: |
+          cd backend
+          npm run format -- --check
+      
+      - name: Validate manifest.json
+        run: |
+          if ! jq empty extension/manifest.json; then
+            echo "Invalid manifest.json"
+            exit 1
+          fi
+          echo "manifest.json is valid"
+      
+      - name: Check extension files exist
+        run: |
+          files=(
+            "extension/manifest.json"
+            "extension/content.js"
+            "extension/background.js"
+            "extension/popup.html"
+            "extension/popup.js"
+            "extension/popup.css"
+          )
+          for file in "${files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "Missing required file: $file"
+              exit 1
+            fi
+          done
+          echo "All required extension files present"
+      
+      - name: Success
+        run: echo "✅ CI checks passed!"
+
