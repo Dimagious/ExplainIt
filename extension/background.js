@@ -35,8 +35,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     console.log('[Background] Stored text for tab', tabId, ':', message.text.substring(0, 50) + '...');
     
-    // US-022: Open popup automatically
-    chrome.action.openPopup();
+    // US-022: Popup will be opened manually by user (auto-open not reliable in MV3)
+    // chrome.action.openPopup(); // Removed - user clicks extension icon instead
     
     sendResponse({ success: true });
     return true;
