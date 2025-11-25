@@ -41,12 +41,9 @@ const rateLimiter = rateLimit({
       return false; // Still apply rate limiting in dev (but with higher limit)
     }
     return false;
-  },
-  
-  // Use IP address for rate limiting
-  keyGenerator: (req) => {
-    return req.ip || req.headers['x-forwarded-for'] || 'unknown';
   }
+  
+  // Note: keyGenerator removed - using default (properly handles IPv6)
 });
 
 console.log(`⏱️  Rate limiting: ${MAX_REQUESTS} requests per ${RATE_LIMIT_WINDOW_MS/1000}s (${NODE_ENV})`);
