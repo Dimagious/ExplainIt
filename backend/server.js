@@ -11,6 +11,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 
 const explainRoutes = require('./routes/explain');
+const mockRoutes = require('./routes/mock');
 const errorHandler = require('./middleware/errorHandler');
 const rateLimiter = require('./middleware/rateLimit');
 
@@ -56,6 +57,9 @@ app.use('/api', rateLimiter);
 // US-014: API routes
 app.use('/api/v1', explainRoutes);
 
+// Mock routes for testing without OpenAI quota
+app.use('/api/v1', mockRoutes);
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
@@ -75,6 +79,7 @@ const server = app.listen(PORT, () => {
   console.log(`📝 Environment: ${NODE_ENV}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
   console.log(`⚡ API endpoint: http://localhost:${PORT}/api/v1/explain`);
+  console.log(`🧪 Mock endpoint: http://localhost:${PORT}/api/v1/mock-explain`);
   
   // Validate OpenAI API key is present
   if (!process.env.OPENAI_API_KEY) {
