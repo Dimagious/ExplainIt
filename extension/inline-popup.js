@@ -1,12 +1,18 @@
 /**
  * ExplainIt! Inline Popup
  * Shows explanation directly on the page (better UX than extension popup)
+ * 
+ * SECURITY: Uses textContent to prevent XSS attacks
+ * ARCHITECTURE: Uses config.js for environment-based settings
  */
 
 let inlinePopup = null;
 let popupShadowRoot = null;
+let retryCount = 0;
+let currentText = null;
 
-const API_URL = 'http://localhost:3000/api/v1/explain';
+// Get config (loaded from config.js in manifest)
+const config = window.ExplainItConfig ? window.ExplainItConfig.getConfig() : null;
 
 /**
  * Create inline popup window
@@ -261,22 +267,43 @@ function removeInlinePopup() {
 /**
  * Fetch explanation from backend via background script
  * (Content scripts can't make direct fetch due to CORS)
+ * 
+ * SECURITY: Validates text before sending
+ * ARCHITECTURE: Uses config for validation rules
  */
 async function fetchExplanation(text) {
   try {
+    // Store current text for retry
+    currentText = text;
+    
+    // CLIENT-SIDE VALIDATION: Check text before sending
+    if (config && config.FEATURES.CLIENT_VALIDATION) {
+      const validation = window.ExplainItConfig.validateText(text);
+      if (!validation.valid) {
+        throw new Error(validation.error);
+      }
+      text = validation.sanitized;
+    }
+    
     // Get settings from storage
     const settings = await chrome.storage.sync.get(['language', 'tone']);
     const language = settings.language || 'en';
     const tone = settings.tone || 'simple';
     
-    console.log('[InlinePopup] Requesting explanation via background:', { text: text.substring(0, 50), language, tone });
+    console.log('[InlinePopup] Requesting explanation via background:', { 
+      textLength: text.length, 
+      language, 
+      tone,
+      retryCount 
+    });
     
     // Send message to background script (it has privileges to bypass CORS)
     const response = await chrome.runtime.sendMessage({
       type: 'FETCH_EXPLANATION',
       text: text,
       tone: tone,
-      language: language
+      language: language,
+      retryCount: retryCount
     });
     
     if (!response || !response.success) {
@@ -285,17 +312,30 @@ async function fetchExplanation(text) {
     
     console.log('[InlinePopup] Got explanation from background');
     
+    // Reset retry count on success
+    retryCount = 0;
+    
     // Display result
     showResult(text, response.result, language, tone);
     
   } catch (error) {
     console.error('[InlinePopup] Error:', error);
-    showError(error.message, text);
+    
+    // Check if we should suggest mock fallback
+    const shouldUseMock = config && config.FEATURES.FALLBACK_TO_MOCK && 
+                          (error.message.includes('500') || error.message.includes('429'));
+    
+    const errorMsg = shouldUseMock 
+      ? `${error.message} (Server unavailable)`
+      : error.message;
+    
+    showError(errorMsg, text);
   }
 }
 
 /**
  * Show result in popup
+ * SECURITY FIX: Uses textContent instead of innerHTML to prevent XSS
  */
 function showResult(originalText, explanation, language, tone) {
   if (!popupShadowRoot) return;
@@ -308,22 +348,55 @@ function showResult(originalText, explanation, language, tone) {
     expert: 'Expert'
   };
   
-  content.innerHTML = `
-    <div class="result">
-      <div class="section-title">Original text</div>
-      <div class="original-text">${originalText}</div>
-      
-      <div class="section-title">Explanation</div>
-      <div class="explanation">${explanation}</div>
-    </div>
-    <div class="footer">
-      <div class="settings-badge">${langLabel} • ${toneLabels[tone]}</div>
-      <button class="copy-btn">📋 Copy</button>
-    </div>
-  `;
+  // Create structure safely without innerHTML
+  const resultDiv = document.createElement('div');
+  resultDiv.className = 'result';
+  
+  // Original text section
+  const originalTitle = document.createElement('div');
+  originalTitle.className = 'section-title';
+  originalTitle.textContent = 'Original text';
+  
+  const originalTextDiv = document.createElement('div');
+  originalTextDiv.className = 'original-text';
+  originalTextDiv.textContent = originalText; // SAFE: textContent prevents XSS
+  
+  // Explanation section
+  const explanationTitle = document.createElement('div');
+  explanationTitle.className = 'section-title';
+  explanationTitle.textContent = 'Explanation';
+  
+  const explanationDiv = document.createElement('div');
+  explanationDiv.className = 'explanation';
+  explanationDiv.textContent = explanation; // SAFE: textContent prevents XSS
+  
+  // Append all elements
+  resultDiv.appendChild(originalTitle);
+  resultDiv.appendChild(originalTextDiv);
+  resultDiv.appendChild(explanationTitle);
+  resultDiv.appendChild(explanationDiv);
+  
+  // Footer
+  const footer = document.createElement('div');
+  footer.className = 'footer';
+  
+  const badge = document.createElement('div');
+  badge.className = 'settings-badge';
+  badge.textContent = `${langLabel} • ${toneLabels[tone]}`;
+  
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'copy-btn';
+  copyBtn.textContent = '📋 Copy';
+  
+  footer.appendChild(badge);
+  footer.appendChild(copyBtn);
+  
+  // Clear and append
+  content.innerHTML = '';
+  content.appendChild(resultDiv);
+  content.appendChild(footer);
   
   // Add copy handler
-  const copyBtn = popupShadowRoot.querySelector('.copy-btn');
   copyBtn.addEventListener('click', () => {
     navigator.clipboard.writeText(explanation).then(() => {
       copyBtn.textContent = '✓ Copied!';
@@ -332,33 +405,57 @@ function showResult(originalText, explanation, language, tone) {
         copyBtn.textContent = '📋 Copy';
         copyBtn.classList.remove('copied');
       }, 2000);
+    }).catch(err => {
+      console.error('[InlinePopup] Failed to copy:', err);
+      copyBtn.textContent = '✗ Failed';
+      setTimeout(() => {
+        copyBtn.textContent = '📋 Copy';
+      }, 2000);
     });
   });
 }
 
 /**
  * Show error in popup
+ * SECURITY FIX: Uses textContent instead of innerHTML to prevent XSS
  */
 function showError(message, originalText) {
   if (!popupShadowRoot) return;
   
   const content = popupShadowRoot.querySelector('.content');
-  content.innerHTML = `
-    <div class="error">
-      <div class="error-icon">⚠️</div>
-      <div>${message}</div>
-      <button class="retry-btn">Retry</button>
-    </div>
-  `;
   
-  const retryBtn = popupShadowRoot.querySelector('.retry-btn');
+  // Create error structure safely
+  const errorDiv = document.createElement('div');
+  errorDiv.className = 'error';
+  
+  const errorIcon = document.createElement('div');
+  errorIcon.className = 'error-icon';
+  errorIcon.textContent = '⚠️';
+  
+  const errorMessage = document.createElement('div');
+  errorMessage.textContent = message; // SAFE: textContent prevents XSS
+  
+  const retryBtn = document.createElement('button');
+  retryBtn.className = 'retry-btn';
+  retryBtn.textContent = 'Retry';
+  
+  errorDiv.appendChild(errorIcon);
+  errorDiv.appendChild(errorMessage);
+  errorDiv.appendChild(retryBtn);
+  
+  content.innerHTML = '';
+  content.appendChild(errorDiv);
+  
+  // Add retry handler
   retryBtn.addEventListener('click', () => {
+    // Reset to loading state
     content.innerHTML = `
       <div class="loading">
         <div class="spinner"></div>
         <div class="loading-text">Generating explanation...</div>
       </div>
     `;
+    retryCount++;
     fetchExplanation(originalText);
   });
 }

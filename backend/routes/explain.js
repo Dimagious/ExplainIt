@@ -1,6 +1,9 @@
 /**
  * US-014: POST /explain Endpoint
  * TASK-058: Create /explain route
+ * 
+ * MVP: Free version without authentication
+ * TODO: Add Stripe subscription + authentication later
  */
 
 const express = require('express');

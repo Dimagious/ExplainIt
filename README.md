@@ -118,14 +118,6 @@ chrome://extensions/
 3. Click the blue ExplainIt! icon that appears
 4. See the explanation in the popup!
 
-## 📊 Project Statistics
-
-- **Total Commits:** 18
-- **Lines of Code:** ~3,000+
-- **Development Time:** 1 day
-- **Epics Completed:** 4/4
-- **User Stories Completed:** 24/24
-
 ## 🎨 Tech Stack
 
 ### Frontend (Extension)
@@ -199,14 +191,6 @@ All commits reference User Stories and Tasks for full traceability.
 
 MIT License - See LICENSE file for details
 
-## 🤝 Contributing
-
-This is a portfolio/demo project. Not currently accepting contributions.
-
-## 👨‍💻 Author
-
-Built with ❤️ using BMad methodology and Cursor AI
-
 ---
 
 ## 🎉 MVP Status: DELIVERED ✅
@@ -230,9 +214,3 @@ Built with ❤️ using BMad methodology and Cursor AI
 1. 👆 Select text
 2. 🖱️ Click icon  
 3. ⚡ **INSTANT RESULT!**
-
-**Total clicks: 1** (not 2!) 🎯
-
----
-
-**Made with Cursor + Claude Sonnet 4.5**
