@@ -42,6 +42,41 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
+  // FETCH_EXPLANATION: Proxy API call to avoid CORS in content script
+  if (message.type === 'FETCH_EXPLANATION') {
+    const { text, tone, language } = message;
+    const API_URL = 'http://localhost:3000/api/v1/explain';
+    
+    console.log('[Background] Fetching explanation:', { textLength: text.length, tone, language });
+    
+    fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ text, tone, language })
+    })
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(err => {
+            throw new Error(err.error || `HTTP ${response.status}`);
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('[Background] Got explanation, sending to content');
+        sendResponse({ success: true, result: data.result });
+      })
+      .catch(error => {
+        console.error('[Background] API error:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    
+    return true; // Keep channel open for async response
+  }
+  
   // TASK-099: Popup requests stored text
   if (message.type === 'GET_SELECTED_TEXT') {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {

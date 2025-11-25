@@ -259,7 +259,8 @@ function removeInlinePopup() {
 }
 
 /**
- * Fetch explanation from backend
+ * Fetch explanation from backend via background script
+ * (Content scripts can't make direct fetch due to CORS)
  */
 async function fetchExplanation(text) {
   try {
@@ -268,24 +269,24 @@ async function fetchExplanation(text) {
     const language = settings.language || 'en';
     const tone = settings.tone || 'simple';
     
-    console.log('[InlinePopup] Fetching explanation:', { text: text.substring(0, 50), language, tone });
+    console.log('[InlinePopup] Requesting explanation via background:', { text: text.substring(0, 50), language, tone });
     
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ text, tone, language })
+    // Send message to background script (it has privileges to bypass CORS)
+    const response = await chrome.runtime.sendMessage({
+      type: 'FETCH_EXPLANATION',
+      text: text,
+      tone: tone,
+      language: language
     });
     
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+    if (!response || !response.success) {
+      throw new Error(response?.error || 'Failed to fetch explanation');
     }
     
-    const data = await response.json();
+    console.log('[InlinePopup] Got explanation from background');
     
     // Display result
-    showResult(text, data.result, language, tone);
+    showResult(text, response.result, language, tone);
     
   } catch (error) {
     console.error('[InlinePopup] Error:', error);
