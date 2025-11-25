@@ -2,7 +2,11 @@
  * US-020: Backend Error Handling
  * TASK-086: Create error handler middleware
  * TASK-087: Error response formatter
+ * 
+ * SECURITY: Sanitizes logs to prevent leaking user data
  */
+
+const { sanitizeRequestBody, getLogLevel } = require('../utils/sanitize');
 
 /**
  * TASK-089: Map OpenAI errors to HTTP codes
@@ -61,18 +65,23 @@ function generateRequestId() {
 /**
  * TASK-086: Main error handler middleware
  * TASK-088: Error logging
+ * SECURITY FIX: Sanitizes request body to prevent logging sensitive data
  */
 function errorHandler(err, req, res, next) {
   const requestId = generateRequestId();
+  const logLevel = getLogLevel();
   
-  // US-020: Log full error details server-side
+  // SECURITY: Sanitize request body before logging
+  const sanitizedBody = sanitizeRequestBody(req.body, logLevel);
+  
+  // US-020: Log error details server-side (without exposing user content)
   console.error(`[Error ${requestId}]`, {
     timestamp: new Date().toISOString(),
     method: req.method,
     path: req.path,
     error: err.message,
-    stack: err.stack,
-    body: req.body
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    body: sanitizedBody // SAFE: Contains only metadata/hashes
   });
   
   // Check if it's an OpenAI error

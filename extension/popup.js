@@ -2,7 +2,13 @@
  * ExplainIt! Popup Script
  * US-005: Popup Structure & Layout
  * US-006: Loading State UI
+ * 
+ * REFACTORED: Uses config.js for environment settings
+ * SECURITY: Client-side validation before sending
  */
+
+// Load config (injected via script tag in popup.html)
+// Note: config.js must be loaded before this script in popup.html
 
 // State
 let currentScreen = 'result';
@@ -21,13 +27,17 @@ function showScreen(screenId) {
   const screens = document.querySelectorAll('.screen');
   screens.forEach(screen => {
     screen.classList.remove('active');
+    screen.style.display = 'none'; // Ensure hidden
   });
   
   const targetScreen = document.getElementById(`${screenId}-screen`);
   if (targetScreen) {
     targetScreen.classList.add('active');
+    targetScreen.style.display = 'flex'; // Ensure visible
     currentScreen = screenId;
     console.log('[ExplainIt] Switched to screen:', screenId);
+  } else {
+    console.error('[ExplainIt] Screen not found:', `${screenId}-screen`);
   }
 }
 
@@ -519,17 +529,46 @@ async function fetchExplanation(text) {
       language: settings.language
     };
     
+    // CLIENT-SIDE VALIDATION: Check text before sending
+    if (typeof ExplainItConfig !== 'undefined') {
+      const config = ExplainItConfig.getConfig();
+      if (config.FEATURES.CLIENT_VALIDATION) {
+        const validation = ExplainItConfig.validateText(text);
+        if (!validation.valid) {
+          throw new Error(validation.error);
+        }
+        text = validation.sanitized;
+      }
+    }
+    
     console.log('[ExplainIt] Request payload:', { 
       textLength: text.length, 
       tone: settings.tone, 
       language: settings.language 
     });
     
-    // TASK-101: Call backend API
-    // TODO: For testing with mock endpoint, change to '/mock-explain'
+    // TASK-101: Call backend API via background script (has better network resilience)
+    // Note: Background script handles timeout, retry, and fallback
+    const response = await chrome.runtime.sendMessage({
+      type: 'FETCH_EXPLANATION',
+      text: text,
+      tone: settings.tone,
+      language: settings.language
+    });
+    
+    // Clear timeout
+    clearTimeout(timeoutId);
+    
+    if (!response || !response.success) {
+      throw new Error(response?.error || 'Failed to fetch explanation');
+    }
+    
+    const data = { result: response.result };
+    
+    /* OLD DIRECT FETCH - Replaced with background script call for better resilience
     const API_URL = 'http://localhost:3000/api/v1/explain';
     
-    const response = await fetch(API_URL, {
+    const fetchResponse = await fetch(API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -539,15 +578,14 @@ async function fetchExplanation(text) {
       signal: signal
     });
     
-    clearTimeout(timeoutId);
-    
     // US-024: Parse response
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    if (!fetchResponse.ok) {
+      const errorData = await fetchResponse.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${fetchResponse.status}: ${fetchResponse.statusText}`);
     }
     
-    const data = await response.json();
+    const data = await fetchResponse.json();
+    */
     
     if (!data.result) {
       throw new Error('Empty response from server');

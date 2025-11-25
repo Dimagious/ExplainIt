@@ -82,6 +82,13 @@ const ICON_STYLES = `
     cursor: pointer;
   }
   
+  .icon-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+  }
+  
   .explainit-icon {
     width: 32px;
     height: 32px;
@@ -92,6 +99,7 @@ const ICON_STYLES = `
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
   }
   
   .explainit-icon:hover {
@@ -101,6 +109,66 @@ const ICON_STYLES = `
   
   .explainit-icon:active {
     transform: scale(0.95);
+  }
+  
+  .settings-gear {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #4A90E2;
+    color: white;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    font-size: 14px;
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  
+  .icon-wrapper:hover .settings-gear {
+    display: flex;
+    opacity: 1;
+    transform: translateX(0);
+  }
+  
+  .settings-gear:hover {
+    background: #357ABD;
+    transform: translateX(0) scale(1.1);
+  }
+  
+  .tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 8px;
+    padding: 6px 10px;
+    background: #333;
+    color: white;
+    font-size: 12px;
+    border-radius: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  
+  .tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: #333;
+  }
+  
+  .icon-wrapper:hover .tooltip {
+    opacity: 1;
   }
 `;
 
@@ -134,11 +202,46 @@ function createFloatingIcon() {
   
   // Create icon wrapper
   const iconWrapper = document.createElement('div');
-  iconWrapper.className = 'explainit-icon';
-  iconWrapper.innerHTML = ICON_SVG;
+  iconWrapper.className = 'icon-wrapper';
   
-  // Add click handler
-  iconWrapper.addEventListener('click', handleIconClick);
+  // Create main icon
+  const icon = document.createElement('div');
+  icon.className = 'explainit-icon';
+  icon.innerHTML = ICON_SVG;
+  icon.setAttribute('title', 'Explain selected text');
+  
+  // Create tooltip
+  const tooltip = document.createElement('div');
+  tooltip.className = 'tooltip';
+  tooltip.textContent = 'Explain selected text';
+  
+  // Create settings gear
+  const settingsGear = document.createElement('div');
+  settingsGear.className = 'settings-gear';
+  settingsGear.innerHTML = '⚙️';
+  settingsGear.setAttribute('title', 'Open settings');
+  
+  // Add click handler to main icon
+  icon.addEventListener('click', handleIconClick);
+  
+  // Add click handler to settings gear
+  settingsGear.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    // Hide floating icon
+    removeFloatingIcon();
+    // Show settings popup (same mechanism as inline popup)
+    if (typeof createSettingsPopup === 'function') {
+      createSettingsPopup();
+    } else {
+      console.error('[ExplainIt] createSettingsPopup not available!');
+    }
+  });
+  
+  // Assemble structure
+  iconWrapper.appendChild(tooltip);
+  iconWrapper.appendChild(icon);
+  iconWrapper.appendChild(settingsGear);
   
   // Add to Shadow DOM
   shadowRoot.appendChild(iconWrapper);
