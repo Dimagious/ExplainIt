@@ -27,13 +27,17 @@ function showScreen(screenId) {
   const screens = document.querySelectorAll('.screen');
   screens.forEach(screen => {
     screen.classList.remove('active');
+    screen.style.display = 'none'; // Ensure hidden
   });
   
   const targetScreen = document.getElementById(`${screenId}-screen`);
   if (targetScreen) {
     targetScreen.classList.add('active');
+    targetScreen.style.display = 'flex'; // Ensure visible
     currentScreen = screenId;
     console.log('[ExplainIt] Switched to screen:', screenId);
+  } else {
+    console.error('[ExplainIt] Screen not found:', `${screenId}-screen`);
   }
 }
 

@@ -8,8 +8,11 @@
 
 let inlinePopup = null;
 let popupShadowRoot = null;
+let settingsPopup = null;
+let settingsPopupShadowRoot = null;
 let retryCount = 0;
 let currentText = null;
+let currentSettings = { language: 'en', tone: 'simple' };
 
 // Get config (loaded from config.js in manifest)
 const config = window.ExplainItConfig ? window.ExplainItConfig.getConfig() : null;
@@ -104,10 +107,110 @@ function createInlinePopup(selectedText) {
       background: rgba(255, 255, 255, 0.2);
     }
     
+    .settings-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background 0.2s;
+      margin-right: 8px;
+    }
+    
+    .settings-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    
     .content {
       padding: 20px;
       overflow-y: auto;
       flex: 1;
+    }
+    
+    .settings-form {
+      padding: 24px;
+    }
+    
+    .form-group {
+      margin-bottom: 24px;
+    }
+    
+    .form-group:last-of-type {
+      margin-bottom: 0;
+    }
+    
+    .form-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+    
+    .form-description {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+    
+    .form-select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 2px solid #e1e8ed;
+      border-radius: 8px;
+      font-size: 14px;
+      background: white;
+      color: #333;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    
+    .form-select:hover {
+      border-color: #4A90E2;
+    }
+    
+    .form-select:focus {
+      outline: none;
+      border-color: #4A90E2;
+      box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+    }
+    
+    .explain-btn {
+      width: 100%;
+      background: #4A90E2;
+      color: white;
+      border: none;
+      padding: 14px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      margin-top: 8px;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
+    }
+    
+    .explain-btn:hover {
+      background: #357ABD;
+      box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
+      transform: translateY(-1px);
+    }
+    
+    .explain-btn:active {
+      transform: translateY(0);
+    }
+    
+    .explain-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
     }
     
     .loading {
@@ -223,35 +326,111 @@ function createInlinePopup(selectedText) {
   
   popupShadowRoot.appendChild(style);
   
-  // Add popup structure
-  const popup = document.createElement('div');
-  popup.className = 'popup';
-  popup.innerHTML = `
-    <div class="header">
-      <div class="title">⚡ ExplainIt!</div>
-      <button class="close-btn">×</button>
-    </div>
-    <div class="content">
-      <div class="loading">
-        <div class="spinner"></div>
-        <div class="loading-text">Generating explanation...</div>
+  // Load current settings
+  chrome.storage.sync.get(['language', 'tone'], (stored) => {
+    currentSettings = {
+      language: stored.language || 'en',
+      tone: stored.tone || 'simple'
+    };
+    
+    // Add popup structure - show loading immediately
+    const popup = document.createElement('div');
+    popup.className = 'popup';
+    popup.innerHTML = `
+      <div class="header">
+        <div class="title">⚡ ExplainIt!</div>
+        <div style="display: flex; align-items: center;">
+          <button class="settings-btn" title="Settings">⚙️</button>
+          <button class="close-btn">×</button>
+        </div>
       </div>
-    </div>
-  `;
-  
-  popupShadowRoot.appendChild(popup);
-  
-  // Add close handler
-  const closeBtn = popupShadowRoot.querySelector('.close-btn');
-  closeBtn.addEventListener('click', removeInlinePopup);
-  
-  // Add to page
-  document.body.appendChild(container);
-  inlinePopup = container;
-  
-  // Fetch explanation
-  fetchExplanation(selectedText);
+      <div class="content">
+        <div class="settings-form" id="inline-settings-form" style="display: none;">
+          <div class="form-group">
+            <label class="form-label">
+              <span>🌍</span>
+              <span>Explanation Language</span>
+            </label>
+            <div class="form-description">Your explanations will be provided in this language.</div>
+            <select id="inline-language-select" class="form-select">
+              <option value="en" ${currentSettings.language === 'en' ? 'selected' : ''}>English</option>
+              <option value="ru" ${currentSettings.language === 'ru' ? 'selected' : ''}>Русский</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <span>🎯</span>
+              <span>Explanation Tone</span>
+            </label>
+            <div class="form-description">Choose how detailed and accessible the explanation should be.</div>
+            <select id="inline-tone-select" class="form-select">
+              <option value="simple" ${currentSettings.tone === 'simple' ? 'selected' : ''}>Simple words</option>
+              <option value="kid" ${currentSettings.tone === 'kid' ? 'selected' : ''}>Like I'm 5</option>
+              <option value="expert" ${currentSettings.tone === 'expert' ? 'selected' : ''}>Expert level</option>
+            </select>
+          </div>
+          <button id="inline-save-settings-btn" class="explain-btn">Save & Explain</button>
+        </div>
+        <div id="inline-result-area">
+          <div class="loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Generating explanation...</div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    popupShadowRoot.appendChild(popup);
+    
+    // Add event handlers
+    const closeBtn = popupShadowRoot.querySelector('.close-btn');
+    closeBtn.addEventListener('click', removeInlinePopup);
+    
+    const settingsBtn = popupShadowRoot.querySelector('.settings-btn');
+    const settingsForm = popupShadowRoot.querySelector('#inline-settings-form');
+    const resultArea = popupShadowRoot.querySelector('#inline-result-area');
+    
+    settingsBtn.addEventListener('click', () => {
+      // Toggle settings form visibility
+      if (settingsForm.style.display === 'none') {
+        settingsForm.style.display = 'block';
+        resultArea.style.display = 'none';
+      } else {
+        settingsForm.style.display = 'none';
+        resultArea.style.display = 'block';
+      }
+    });
+    
+    const saveSettingsBtn = popupShadowRoot.querySelector('#inline-save-settings-btn');
+    saveSettingsBtn.addEventListener('click', () => {
+      const languageSelect = popupShadowRoot.querySelector('#inline-language-select');
+      const toneSelect = popupShadowRoot.querySelector('#inline-tone-select');
+      
+      currentSettings = {
+        language: languageSelect.value,
+        tone: toneSelect.value
+      };
+      
+      // Save settings
+      chrome.storage.sync.set(currentSettings);
+      
+      // Hide settings form and show loading
+      settingsForm.style.display = 'none';
+      resultArea.style.display = 'block';
+      
+      // Fetch explanation with new settings
+      fetchExplanation(selectedText);
+    });
+    
+    // Add to page
+    document.body.appendChild(container);
+    inlinePopup = container;
+    
+    // Immediately fetch explanation
+    fetchExplanation(selectedText);
+  });
 }
+
 
 /**
  * Remove inline popup
@@ -285,10 +464,9 @@ async function fetchExplanation(text) {
       text = validation.sanitized;
     }
     
-    // Get settings from storage
-    const settings = await chrome.storage.sync.get(['language', 'tone']);
-    const language = settings.language || 'en';
-    const tone = settings.tone || 'simple';
+    // Use current settings (already loaded)
+    const language = currentSettings.language || 'en';
+    const tone = currentSettings.tone || 'simple';
     
     console.log('[InlinePopup] Requesting explanation via background:', { 
       textLength: text.length, 
@@ -340,7 +518,8 @@ async function fetchExplanation(text) {
 function showResult(originalText, explanation, language, tone) {
   if (!popupShadowRoot) return;
   
-  const content = popupShadowRoot.querySelector('.content');
+  const resultArea = popupShadowRoot.querySelector('#inline-result-area');
+  if (!resultArea) return;
   const langLabel = language === 'en' ? '🇬🇧 English' : '🇷🇺 Русский';
   const toneLabels = {
     simple: 'Simple',
@@ -391,10 +570,11 @@ function showResult(originalText, explanation, language, tone) {
   footer.appendChild(badge);
   footer.appendChild(copyBtn);
   
-  // Clear and append
-  content.innerHTML = '';
-  content.appendChild(resultDiv);
-  content.appendChild(footer);
+  // Clear and append to result area
+  resultArea.innerHTML = '';
+  resultArea.appendChild(resultDiv);
+  resultArea.appendChild(footer);
+  resultArea.style.display = 'block';
   
   // Add copy handler
   copyBtn.addEventListener('click', () => {
@@ -422,7 +602,7 @@ function showResult(originalText, explanation, language, tone) {
 function showError(message, originalText) {
   if (!popupShadowRoot) return;
   
-  const content = popupShadowRoot.querySelector('.content');
+  const resultArea = popupShadowRoot.querySelector('#inline-result-area');
   
   // Create error structure safely
   const errorDiv = document.createElement('div');
@@ -443,13 +623,14 @@ function showError(message, originalText) {
   errorDiv.appendChild(errorMessage);
   errorDiv.appendChild(retryBtn);
   
-  content.innerHTML = '';
-  content.appendChild(errorDiv);
+  resultArea.innerHTML = '';
+  resultArea.appendChild(errorDiv);
+  resultArea.style.display = 'block';
   
   // Add retry handler
   retryBtn.addEventListener('click', () => {
     // Reset to loading state
-    content.innerHTML = `
+    resultArea.innerHTML = `
       <div class="loading">
         <div class="spinner"></div>
         <div class="loading-text">Generating explanation...</div>
@@ -460,10 +641,297 @@ function showError(message, originalText) {
   });
 }
 
+/**
+ * Create settings popup (same mechanism as inline popup)
+ */
+function createSettingsPopup() {
+  // Remove existing popups if any
+  removeInlinePopup();
+  removeSettingsPopup();
+  
+  // Load current settings
+  chrome.storage.sync.get(['language', 'tone'], (stored) => {
+    const settings = {
+      language: stored.language || 'en',
+      tone: stored.tone || 'simple'
+    };
+    
+    // Create container
+    const container = document.createElement('div');
+    container.id = 'explainit-settings-popup-container';
+    container.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 999999;
+      width: 400px;
+      max-width: 90vw;
+      max-height: 80vh;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    `;
+    
+    // Create shadow DOM for isolation
+    settingsPopupShadowRoot = container.attachShadow({ mode: 'open' });
+    
+    // Add styles (reuse from inline popup)
+    const style = document.createElement('style');
+    style.textContent = `
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      .popup {
+        background: white;
+        display: flex;
+        flex-direction: column;
+        max-height: 80vh;
+        animation: slideIn 0.3s ease-out;
+      }
+      
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      .header {
+        padding: 16px 20px;
+        background: #4A90E2;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      
+      .title {
+        font-size: 18px;
+        font-weight: 600;
+      }
+      
+      .close-btn {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        transition: background 0.2s;
+      }
+      
+      .close-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+      
+      .content {
+        padding: 24px;
+        overflow-y: auto;
+        flex: 1;
+      }
+      
+      .form-group {
+        margin-bottom: 24px;
+      }
+      
+      .form-group:last-of-type {
+        margin-bottom: 0;
+      }
+      
+      .form-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+      }
+      
+      .form-description {
+        font-size: 13px;
+        color: #666;
+        margin-bottom: 12px;
+        line-height: 1.5;
+      }
+      
+      .form-select {
+        width: 100%;
+        padding: 10px 14px;
+        border: 2px solid #e1e8ed;
+        border-radius: 8px;
+        font-size: 14px;
+        background: white;
+        color: #333;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+      }
+      
+      .form-select:hover {
+        border-color: #4A90E2;
+      }
+      
+      .form-select:focus {
+        outline: none;
+        border-color: #4A90E2;
+        box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+      }
+      
+      .save-btn {
+        width: 100%;
+        background: #4A90E2;
+        color: white;
+        border: none;
+        padding: 14px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 15px;
+        font-weight: 600;
+        margin-top: 8px;
+        transition: all 0.2s;
+        box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
+      }
+      
+      .save-btn:hover {
+        background: #357ABD;
+        box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
+        transform: translateY(-1px);
+      }
+      
+      .save-btn:active {
+        transform: translateY(0);
+      }
+      
+      .save-confirmation {
+        margin-top: 12px;
+        padding: 10px;
+        background: #50E3C2;
+        color: white;
+        border-radius: 6px;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 500;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      
+      .save-confirmation.show {
+        opacity: 1;
+      }
+    `;
+    
+    settingsPopupShadowRoot.appendChild(style);
+    
+    // Create popup structure
+    const popup = document.createElement('div');
+    popup.className = 'popup';
+    popup.innerHTML = `
+      <div class="header">
+        <div class="title">⚡ ExplainIt!</div>
+        <button class="close-btn">×</button>
+      </div>
+      <div class="content">
+        <div class="form-group">
+          <label class="form-label">
+            <span>🌍</span>
+            <span>Explanation Language</span>
+          </label>
+          <div class="form-description">Your explanations will be provided in this language.</div>
+          <select id="settings-language-select" class="form-select">
+            <option value="en" ${settings.language === 'en' ? 'selected' : ''}>English</option>
+            <option value="ru" ${settings.language === 'ru' ? 'selected' : ''}>Русский</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">
+            <span>🎯</span>
+            <span>Explanation Tone</span>
+          </label>
+          <div class="form-description">Choose how detailed and accessible the explanation should be.</div>
+          <select id="settings-tone-select" class="form-select">
+            <option value="simple" ${settings.tone === 'simple' ? 'selected' : ''}>Simple words</option>
+            <option value="kid" ${settings.tone === 'kid' ? 'selected' : ''}>Like I'm 5</option>
+            <option value="expert" ${settings.tone === 'expert' ? 'selected' : ''}>Expert level</option>
+          </select>
+        </div>
+        <button id="settings-save-btn" class="save-btn">Save Settings</button>
+        <div id="settings-confirmation" class="save-confirmation">✓ Settings saved successfully!</div>
+      </div>
+    `;
+    
+    settingsPopupShadowRoot.appendChild(popup);
+    
+    // Add event handlers
+    const closeBtn = settingsPopupShadowRoot.querySelector('.close-btn');
+    closeBtn.addEventListener('click', removeSettingsPopup);
+    
+    const saveBtn = settingsPopupShadowRoot.querySelector('#settings-save-btn');
+    const confirmation = settingsPopupShadowRoot.querySelector('#settings-confirmation');
+    
+    saveBtn.addEventListener('click', () => {
+      const languageSelect = settingsPopupShadowRoot.querySelector('#settings-language-select');
+      const toneSelect = settingsPopupShadowRoot.querySelector('#settings-tone-select');
+      
+      const newSettings = {
+        language: languageSelect.value,
+        tone: toneSelect.value
+      };
+      
+      // Save settings
+      chrome.storage.sync.set(newSettings, () => {
+        // Update current settings
+        currentSettings = newSettings;
+        
+        // Show confirmation
+        confirmation.classList.add('show');
+        setTimeout(() => {
+          confirmation.classList.remove('show');
+        }, 2000);
+      });
+    });
+    
+    // Add to page
+    document.body.appendChild(container);
+    settingsPopup = container;
+  });
+}
+
+/**
+ * Remove settings popup
+ */
+function removeSettingsPopup() {
+  if (settingsPopup && settingsPopup.parentNode) {
+    settingsPopup.parentNode.removeChild(settingsPopup);
+    settingsPopup = null;
+    settingsPopupShadowRoot = null;
+  }
+}
+
 // Close on ESC key
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && inlinePopup) {
-    removeInlinePopup();
+  if (e.key === 'Escape') {
+    if (inlinePopup) {
+      removeInlinePopup();
+    }
+    if (settingsPopup) {
+      removeSettingsPopup();
+    }
   }
 });
 
@@ -471,6 +939,9 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('click', (e) => {
   if (inlinePopup && !inlinePopup.contains(e.target)) {
     removeInlinePopup();
+  }
+  if (settingsPopup && !settingsPopup.contains(e.target)) {
+    removeSettingsPopup();
   }
 });
 

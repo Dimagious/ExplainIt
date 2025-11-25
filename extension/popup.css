@@ -10,16 +10,7 @@
   box-sizing: border-box;
 }
 
-/* TASK-021: Screen switching */
-.screen {
-  display: none;
-}
-
-.screen.active {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
+/* TASK-021: Screen switching - REMOVED duplicate rule (conflicts with below) */
 
 :root {
   /* Brand Colors */
