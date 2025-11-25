@@ -209,8 +209,8 @@ function positionIcon() {
 }
 
 /**
- * Handle icon click
- * TODO: US-022 - Send message to popup
+ * US-022: Handle icon click
+ * TASK-096: Send selected text to background script
  */
 function handleIconClick(event) {
   event.preventDefault();
@@ -218,8 +218,30 @@ function handleIconClick(event) {
   
   console.log('[ExplainIt] Icon clicked! Selected text:', selectedText.substring(0, 50) + '...');
   
-  // TODO: US-022 - Open popup with selected text
-  alert('ExplainIt!\n\nSelected text: ' + selectedText.substring(0, 100) + '...\n\n(Popup integration coming in US-022)');
+  // US-022: Send message to background script
+  chrome.runtime.sendMessage(
+    {
+      type: 'SELECTED_TEXT',
+      text: selectedText
+    },
+    (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('[ExplainIt] Failed to send message:', chrome.runtime.lastError);
+        alert('ExplainIt! Error: Could not communicate with extension.\nPlease refresh the page and try again.');
+        return;
+      }
+      
+      if (response && response.success) {
+        console.log('[ExplainIt] Text sent to background successfully');
+        // Background will open the popup automatically
+        // Hide icon after successful send
+        removeFloatingIcon();
+      } else {
+        console.error('[ExplainIt] Background rejected message:', response);
+        alert('ExplainIt! Error: Could not store selected text.\nPlease try again.');
+      }
+    }
+  );
 }
 
 /**

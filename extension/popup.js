@@ -490,50 +490,90 @@ function hideLoadingState() {
 }
 
 /**
- * US-006/007: Simulate API request with AbortController
- * TODO: Replace with actual API call in US-019
+ * US-023: Fetch explanation from backend API
+ * TASK-101: Implement fetch call with AbortController
+ * TASK-103: Add timeout handling
  */
 async function fetchExplanation(text) {
-  console.log('[ExplainIt] Fetching explanation for:', text);
+  console.log('[ExplainIt] Fetching explanation for:', text.substring(0, 50) + '...');
   
-  // Create AbortController for cancellable request
+  // US-006: Show loading state
+  showLoadingState(text);
+  
+  // TASK-101: Create AbortController for cancellable request
   abortController = new AbortController();
+  const signal = abortController.signal;
+  
+  // TASK-103: Set timeout (30 seconds)
+  const timeoutId = setTimeout(() => {
+    if (abortController) {
+      abortController.abort();
+    }
+  }, 30000);
   
   try {
-    // TODO: US-019 - Replace with actual backend API call
-    // For now, simulate a delay
-    await new Promise((resolve, reject) => {
-      const timeoutId = setTimeout(resolve, 2000);
-      
-      // Listen for abort signal
-      abortController.signal.addEventListener('abort', () => {
-        clearTimeout(timeoutId);
-        reject(new DOMException('Request was aborted', 'AbortError'));
-      });
+    // US-023: Prepare request payload with current settings
+    const requestBody = {
+      text: text,
+      tone: settings.tone,
+      language: settings.language
+    };
+    
+    console.log('[ExplainIt] Request payload:', { 
+      textLength: text.length, 
+      tone: settings.tone, 
+      language: settings.language 
     });
     
-    // US-007: Simulate realistic response with formatting
-    const explanations = [
-      `This is a detailed explanation of the selected text.\n\nThe text appears to be about demonstrating the loading state functionality. Here's what it means:\n\n1. First, it shows how the system handles user input\n2. Then, it demonstrates the preview feature\n3. Finally, it displays the result after processing\n\nThis functionality is crucial for providing good user experience, as it keeps users informed about what's happening in the background.`,
-      
-      `Let me explain this in simple terms:\n\nThe selected text is demonstrating how our extension works. When you select text, the extension captures it and sends it for processing.\n\nKey points:\n• The loading state shows you that something is happening\n• The preview helps you confirm the right text was selected\n• The result appears after a short delay\n\nThis creates a smooth and intuitive user experience.`,
-      
-      `Quick explanation:\n\nThis text describes a test functionality. It simulates the process of:\n\n- Capturing selected text\n- Showing a loading indicator\n- Displaying a preview\n- Returning the final result\n\nThe delay is intentional to demonstrate the loading state behavior.`
-    ];
+    // TASK-101: Call backend API
+    // TODO: For testing with mock endpoint, change to '/mock-explain'
+    const API_URL = 'http://localhost:3000/api/v1/explain';
     
-    // Pick a random explanation
-    const randomExplanation = explanations[Math.floor(Math.random() * explanations.length)];
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(requestBody),
+      signal: signal
+    });
     
-    return {
-      result: randomExplanation
-    };
+    clearTimeout(timeoutId);
+    
+    // US-024: Parse response
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.result) {
+      throw new Error('Empty response from server');
+    }
+    
+    console.log('[ExplainIt] Received explanation:', data.result.substring(0, 50) + '...');
+    
+    // US-024: Display result
+    hideLoadingState();
+    showResult(text, data.result, settings);
+    
   } catch (error) {
+    clearTimeout(timeoutId);
+    hideLoadingState();
+    
     if (error.name === 'AbortError') {
       console.log('[ExplainIt] Request was cancelled');
-      throw error;
+      showState('empty');
+      return;
     }
+    
     console.error('[ExplainIt] Error fetching explanation:', error);
-    throw error;
+    
+    // Show error state with retry button
+    showErrorState(error.message, text);
+    
   } finally {
     abortController = null;
   }
@@ -541,14 +581,56 @@ async function fetchExplanation(text) {
 
 /**
  * US-022: Check for selected text from content script
- * TODO: Implement in US-022
+ * TASK-099: Get text from background script
  */
 async function checkForSelectedText() {
   console.log('[ExplainIt] Checking for selected text...');
-  // TODO: US-022 - Get text from background script
   
-  // For now, show empty state
-  showState('empty');
+  try {
+    // US-022: Request text from background
+    const response = await chrome.runtime.sendMessage({
+      type: 'GET_SELECTED_TEXT'
+    });
+    
+    if (response && response.success && response.text) {
+      console.log('[ExplainIt] Received selected text:', response.text.substring(0, 50) + '...');
+      
+      // US-023: Immediately fetch explanation
+      await fetchExplanation(response.text);
+    } else {
+      console.log('[ExplainIt] No selected text available:', response?.error);
+      showState('empty');
+    }
+  } catch (error) {
+    console.error('[ExplainIt] Error getting selected text:', error);
+    showState('empty');
+  }
+}
+
+/**
+ * US-025/026: Show error state with retry option
+ */
+function showErrorState(errorMessage, originalText = '') {
+  console.log('[ExplainIt] Showing error state:', errorMessage);
+  
+  const errorState = document.getElementById('error-state');
+  const errorMessageElement = document.getElementById('error-message');
+  const retryBtn = document.getElementById('retry-btn');
+  
+  if (errorMessageElement) {
+    errorMessageElement.textContent = errorMessage;
+  }
+  
+  // Store original text for retry
+  if (originalText) {
+    if (retryBtn) {
+      retryBtn.onclick = () => {
+        fetchExplanation(originalText);
+      };
+    }
+  }
+  
+  showState('error');
 }
 
 /**
