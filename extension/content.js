@@ -209,8 +209,7 @@ function positionIcon() {
 }
 
 /**
- * US-022: Handle icon click
- * TASK-096: Send selected text to background script
+ * Handle icon click - show inline popup
  */
 function handleIconClick(event) {
   event.preventDefault();
@@ -218,30 +217,16 @@ function handleIconClick(event) {
   
   console.log('[ExplainIt] Icon clicked! Selected text:', selectedText.substring(0, 50) + '...');
   
-  // US-022: Send message to background script
-  chrome.runtime.sendMessage(
-    {
-      type: 'SELECTED_TEXT',
-      text: selectedText
-    },
-    (response) => {
-      if (chrome.runtime.lastError) {
-        console.error('[ExplainIt] Failed to send message:', chrome.runtime.lastError);
-        alert('ExplainIt! Error: Could not communicate with extension.\nPlease refresh the page and try again.');
-        return;
-      }
-      
-      if (response && response.success) {
-        console.log('[ExplainIt] Text sent to background successfully');
-        // Background will open the popup automatically
-        // Hide icon after successful send
-        removeFloatingIcon();
-      } else {
-        console.error('[ExplainIt] Background rejected message:', response);
-        alert('ExplainIt! Error: Could not store selected text.\nPlease try again.');
-      }
-    }
-  );
+  // Hide floating icon
+  removeFloatingIcon();
+  
+  // Show inline popup with explanation (defined in inline-popup.js)
+  if (typeof createInlinePopup === 'function') {
+    createInlinePopup(selectedText);
+  } else {
+    console.error('[ExplainIt] inline-popup.js not loaded!');
+    alert('ExplainIt! Error: Popup module not loaded.\nPlease refresh the page.');
+  }
 }
 
 /**
