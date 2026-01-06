@@ -60,13 +60,21 @@ function validateText(text) {
 
 /**
  * TASK-005: SVG Icon Asset
- * Simple, recognizable icon for ExplainIt!
+ * Magnifying glass with sparkle - matches extension icon
  */
 const ICON_SVG = `
 <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
   <circle cx="16" cy="16" r="15" fill="#4A90E2" stroke="white" stroke-width="2"/>
-  <text x="16" y="22" font-family="Arial, sans-serif" font-size="20" font-weight="bold" 
-        text-anchor="middle" fill="white">?!</text>
+  <!-- Magnifying glass -->
+  <circle cx="13" cy="13" r="6" stroke="white" stroke-width="2.5" fill="none"/>
+  <line x1="17.5" y1="17.5" x2="23" y2="23" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Sparkle -->
+  <circle cx="23" cy="9" r="1.5" fill="#FFD700"/>
+  <line x1="23" y1="5" x2="23" y2="7" stroke="#FFD700" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="23" y1="11" x2="23" y2="13" stroke="#FFD700" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="19" y1="9" x2="21" y2="9" stroke="#FFD700" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="25" y1="9" x2="27" y2="9" stroke="#FFD700" stroke-width="1.5" stroke-linecap="round"/>
 </svg>
 `;
 

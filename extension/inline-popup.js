@@ -338,7 +338,7 @@ function createInlinePopup(selectedText) {
     popup.className = 'popup';
     popup.innerHTML = `
       <div class="header">
-        <div class="title">⚡ ExplainIt!</div>
+        <div class="title">🔍 ExplainIt!</div>
         <div style="display: flex; align-items: center;">
           <button class="settings-btn" title="Settings">⚙️</button>
           <button class="close-btn">×</button>
@@ -843,7 +843,7 @@ function createSettingsPopup() {
     popup.className = 'popup';
     popup.innerHTML = `
       <div class="header">
-        <div class="title">⚡ ExplainIt!</div>
+        <div class="title">🔍 ExplainIt!</div>
         <button class="close-btn">×</button>
       </div>
       <div class="content">

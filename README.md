@@ -1,4 +1,4 @@
-# ⚡ ExplainIt! - AI-Powered Text Explanation Chrome Extension
+# 🔍 ExplainIt! - AI-Powered Text Explanation Chrome Extension
 
 > Instant AI explanations for any selected text. One click, instant result!
 
@@ -213,4 +213,4 @@ MIT License - See LICENSE file for details
 ### User Flow:
 1. 👆 Select text
 2. 🖱️ Click icon  
-3. ⚡ **INSTANT RESULT!**
+3. 🔍 **INSTANT RESULT!**

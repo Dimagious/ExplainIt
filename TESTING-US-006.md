@@ -232,7 +232,7 @@ showLoadingState('Line 1\nLine 2\nLine 3\nLine 4\nLine 5');
 
 ## Performance Checks
 
-### ⚡ P-006-01: Popup Load Time
+### 🔍 P-006-01: Popup Load Time
 **Target:** ≤300ms (from US-005)
 
 **Steps:**
@@ -244,7 +244,7 @@ showLoadingState('Line 1\nLine 2\nLine 3\nLine 4\nLine 5');
 
 ---
 
-### ⚡ P-006-02: State Transition Speed
+### 🔍 P-006-02: State Transition Speed
 **Target:** ≤100ms
 
 **Steps:**

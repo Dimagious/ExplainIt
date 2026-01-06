@@ -78,7 +78,7 @@ const server = app.listen(PORT, () => {
   console.log(`🚀 ExplainIt! Backend running on port ${PORT}`);
   console.log(`📝 Environment: ${NODE_ENV}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-  console.log(`⚡ API endpoint: http://localhost:${PORT}/api/v1/explain`);
+  console.log(`🔍 API endpoint: http://localhost:${PORT}/api/v1/explain`);
   console.log(`🧪 Mock endpoint: http://localhost:${PORT}/api/v1/mock-explain`);
   
   // Validate OpenAI API key is present
