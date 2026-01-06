@@ -20,6 +20,7 @@ lib-cov
 
 # Coverage directory used by tools like istanbul
 coverage
+backend/coverage
 *.lcov
 
 # nyc test coverage
@@ -148,6 +149,7 @@ web-bundles
 extension/*.crx
 extension/*.pem
 extension/*.zip
+*.zip
 
 # IDE
 .idea/
