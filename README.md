@@ -153,39 +153,36 @@ Using **gpt-4o-mini** (cheapest OpenAI model):
 - ✅ XSS sanitization
 - ✅ Shadow DOM isolation
 
-## 📝 BMad Methodology
+## 📸 Screenshots
 
-This project was built using the **BMad methodology**, with complete traceability:
+| Select Text | Get Explanation | Settings |
+|-------------|-----------------|----------|
+| ![Selection](store-assets/screenshots/screenshot-1-selection.png) | ![Explanation](store-assets/screenshots/screenshot-2-russian.png) | ![Settings](store-assets/screenshots/screenshot-4-settings.png) |
 
-```
-.bmad/
-├── architecture/      # System design
-├── stories/          # User Stories with Gherkin AC
-├── tasks/            # Dev Tasks
-└── backlog/          # Prioritized backlog
-```
+## 🔐 Privacy
 
-All commits reference User Stories and Tasks for full traceability.
+Your privacy matters. We do NOT collect browsing history, personal data, or analytics. Only the text you explicitly select is processed. See our [Privacy Policy](https://dimagious.github.io/ExplainIt/privacy-policy.html).
 
-## 🎯 Roadmap (Post-MVP)
+## 🎯 Roadmap
+
+### v1.0.0 - MVP ✅
+- [x] Text selection and floating icon
+- [x] AI-powered explanations (OpenAI GPT-4o-mini)
+- [x] Multi-language support (EN/RU)
+- [x] Three complexity levels
+- [x] Professional icons (magnifying glass with sparkle)
+- [x] Privacy policy
+- [x] Chrome Web Store submission assets
 
 ### v1.1 - Enhanced UX
-- [ ] US-025/026: Better error messages
-- [ ] US-027: Validation error display
-- [ ] US-028: Retry logic
-- [ ] US-029: Manifest compliance check
-- [ ] US-030: Professional icons
-
-### v1.2 - Polish
-- [ ] US-031: Privacy policy
-- [ ] US-032: Chrome Web Store listing
-- [ ] US-033: Pre-submission testing
+- [ ] Better error messages with suggestions
+- [ ] Keyboard shortcuts
+- [ ] More languages
 
 ### v2.0 - Monetization
 - [ ] User authentication
-- [ ] Subscription plans (Stripe)
-- [ ] Usage limits
-- [ ] Analytics dashboard
+- [ ] Subscription plans
+- [ ] Usage analytics
 
 ## 📜 License
 
