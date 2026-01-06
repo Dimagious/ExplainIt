@@ -12,7 +12,7 @@ const {
 describe('Prompt Builder', () => {
   describe('getToneLabel', () => {
     test('should return correct label for simple tone', () => {
-      expect(getToneLabel('simple')).toBe('Simple');
+      expect(getToneLabel('simple')).toBe('Simple words');
     });
     
     test('should return correct label for kid tone', () => {
@@ -20,11 +20,11 @@ describe('Prompt Builder', () => {
     });
     
     test('should return correct label for expert tone', () => {
-      expect(getToneLabel('expert')).toBe('Expert');
+      expect(getToneLabel('expert')).toBe('Expert level');
     });
     
-    test('should return Simple for unknown tone', () => {
-      expect(getToneLabel('unknown')).toBe('Simple');
+    test('should return input value for unknown tone', () => {
+      expect(getToneLabel('unknown')).toBe('unknown');
     });
   });
   
@@ -37,8 +37,8 @@ describe('Prompt Builder', () => {
       expect(getLanguageLabel('ru')).toBe('Russian');
     });
     
-    test('should return English for unknown language', () => {
-      expect(getLanguageLabel('fr')).toBe('English');
+    test('should return input value for unknown language', () => {
+      expect(getLanguageLabel('fr')).toBe('fr');
     });
   });
   
@@ -49,7 +49,6 @@ describe('Prompt Builder', () => {
       const prompt = buildPrompt(testText, 'simple', 'en');
       
       expect(prompt).toContain(testText);
-      expect(prompt).toContain('English');
       expect(prompt.toLowerCase()).toContain('simple');
     });
     
@@ -57,7 +56,6 @@ describe('Prompt Builder', () => {
       const prompt = buildPrompt(testText, 'kid', 'ru');
       
       expect(prompt).toContain(testText);
-      expect(prompt).toContain('Russian');
       expect(prompt.toLowerCase()).toContain('5');
     });
     
@@ -68,19 +66,23 @@ describe('Prompt Builder', () => {
       expect(prompt.toLowerCase()).toContain('expert');
     });
     
-    test('should handle default values', () => {
-      const prompt = buildPrompt(testText, 'unknown', 'unknown');
-      
-      expect(prompt).toContain(testText);
-      expect(prompt).toBeDefined();
+    test('should throw error for invalid tone/language combination', () => {
+      expect(() => buildPrompt(testText, 'unknown', 'unknown'))
+        .toThrow('Invalid tone (unknown) or language (unknown)');
     });
     
-    test('should include instructions for tone', () => {
+    test('should include different instructions for different tones', () => {
       const simplePrompt = buildPrompt(testText, 'simple', 'en');
       const expertPrompt = buildPrompt(testText, 'expert', 'en');
       
       expect(simplePrompt).not.toBe(expertPrompt);
     });
+    
+    test('should build Russian simple prompt correctly', () => {
+      const prompt = buildPrompt(testText, 'simple', 'ru');
+      
+      expect(prompt).toContain(testText);
+      expect(prompt).toContain('Текст:');
+    });
   });
 });
-

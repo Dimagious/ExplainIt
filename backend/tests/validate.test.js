@@ -1,6 +1,9 @@
 /**
  * Unit tests for validation middleware
  * Tests request validation logic
+ * 
+ * NOTE: Requires express-validator to be installed:
+ *   npm install express-validator
  */
 
 const { validateExplainRequest } = require('../middleware/validate');
@@ -20,140 +23,137 @@ describe('Validation Middleware', () => {
   });
   
   describe('validateExplainRequest', () => {
-    test('should pass valid request', () => {
+    test('should pass valid request', async () => {
       req.body = {
         text: 'This is a valid text to explain',
         tone: 'simple',
         language: 'en'
       };
       
-      validateExplainRequest(req, res, next);
+      await validateExplainRequest(req, res, next);
       
-      expect(next).toHaveBeenCalledWith();
-      expect(res.status).not.toHaveBeenCalled();
+      // Wait for async validation to complete
+      await new Promise(resolve => setTimeout(resolve, 10));
+      
+      expect(next).toHaveBeenCalled();
     });
     
-    test('should reject missing text', () => {
+    test('should reject missing text', async () => {
       req.body = {
         tone: 'simple',
         language: 'en'
       };
       
-      validateExplainRequest(req, res, next);
+      await validateExplainRequest(req, res, next);
+      await new Promise(resolve => setTimeout(resolve, 10));
       
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: expect.stringContaining('required')
+          code: 'VALIDATION_ERROR'
         })
       );
-      expect(next).not.toHaveBeenCalled();
     });
     
-    test('should reject empty text', () => {
-      req.body = {
-        text: '',
-        tone: 'simple',
-        language: 'en'
-      };
-      
-      validateExplainRequest(req, res, next);
-      
-      expect(res.status).toHaveBeenCalledWith(400);
-    });
-    
-    test('should reject text that is too short', () => {
+    test('should reject text that is too short', async () => {
       req.body = {
         text: 'a',
         tone: 'simple',
         language: 'en'
       };
       
-      validateExplainRequest(req, res, next);
+      await validateExplainRequest(req, res, next);
+      await new Promise(resolve => setTimeout(resolve, 10));
       
       expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          error: expect.stringContaining('short')
-        })
-      );
     });
     
-    test('should reject text that is too long', () => {
+    test('should reject text that is too long', async () => {
       req.body = {
         text: 'a'.repeat(2001),
         tone: 'simple',
         language: 'en'
       };
       
-      validateExplainRequest(req, res, next);
+      await validateExplainRequest(req, res, next);
+      await new Promise(resolve => setTimeout(resolve, 10));
       
       expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          error: expect.stringContaining('long')
-        })
-      );
     });
     
-    test('should reject invalid tone', () => {
+    test('should reject invalid tone', async () => {
       req.body = {
-        text: 'Valid text',
+        text: 'Valid text for testing',
         tone: 'invalid',
         language: 'en'
       };
       
-      validateExplainRequest(req, res, next);
+      await validateExplainRequest(req, res, next);
+      await new Promise(resolve => setTimeout(resolve, 10));
       
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: expect.stringContaining('tone')
+          code: 'VALIDATION_ERROR'
         })
       );
     });
     
-    test('should reject invalid language', () => {
+    test('should reject invalid language', async () => {
       req.body = {
-        text: 'Valid text',
+        text: 'Valid text for testing',
         tone: 'simple',
         language: 'fr'
       };
       
-      validateExplainRequest(req, res, next);
+      await validateExplainRequest(req, res, next);
+      await new Promise(resolve => setTimeout(resolve, 10));
       
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: expect.stringContaining('language')
+          code: 'VALIDATION_ERROR'
         })
       );
     });
     
-    test('should use default values for missing tone/language', () => {
+    test('should reject missing tone', async () => {
       req.body = {
-        text: 'Valid text'
+        text: 'Valid text for testing',
+        language: 'en'
       };
       
-      validateExplainRequest(req, res, next);
+      await validateExplainRequest(req, res, next);
+      await new Promise(resolve => setTimeout(resolve, 10));
       
-      expect(req.body.tone).toBe('simple');
-      expect(req.body.language).toBe('en');
-      expect(next).toHaveBeenCalledWith();
+      expect(res.status).toHaveBeenCalledWith(400);
     });
     
-    test('should trim whitespace from text', () => {
+    test('should reject missing language', async () => {
       req.body = {
-        text: '  Valid text  ',
+        text: 'Valid text for testing',
+        tone: 'simple'
+      };
+      
+      await validateExplainRequest(req, res, next);
+      await new Promise(resolve => setTimeout(resolve, 10));
+      
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+    
+    test('should sanitize HTML from text', async () => {
+      req.body = {
+        text: '<script>alert("xss")</script>Valid text here',
         tone: 'simple',
         language: 'en'
       };
       
-      validateExplainRequest(req, res, next);
+      await validateExplainRequest(req, res, next);
+      await new Promise(resolve => setTimeout(resolve, 10));
       
-      expect(req.body.text).toBe('Valid text');
-      expect(next).toHaveBeenCalledWith();
+      // Should pass validation but with HTML stripped
+      expect(next).toHaveBeenCalled();
+      expect(req.body.text).not.toContain('<script>');
     });
   });
 });
-

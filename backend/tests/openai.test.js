@@ -1,7 +1,21 @@
 /**
  * Unit tests for OpenAI service
- * Tests API integration and cost calculation
+ * Tests cost calculation (API calls are mocked)
  */
+
+// Mock OpenAI before requiring the module
+jest.mock('openai', () => {
+  return jest.fn().mockImplementation(() => ({
+    chat: {
+      completions: {
+        create: jest.fn()
+      }
+    }
+  }));
+});
+
+// Set mock API key before requiring the module
+process.env.OPENAI_API_KEY = 'test-api-key';
 
 const { calculateCost } = require('../services/openai');
 
@@ -39,4 +53,3 @@ describe('OpenAI Service', () => {
     });
   });
 });
-
