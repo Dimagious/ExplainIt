@@ -1,12 +1,22 @@
-# Extension Icons
+# ExplainIt! Icons
 
-TODO: US-030 - Create actual icons
+Extension icons in required sizes for Chrome Web Store.
 
-Required sizes:
-- icon16.png (16x16px) - Toolbar icon
-- icon48.png (48x48px) - Extension management page
-- icon128.png (128x128px) - Chrome Web Store listing
+## Files
 
-For now, placeholder text files are used for the skeleton structure.
-Replace these with actual PNG files during US-030.
+| File | Size | Usage |
+|------|------|-------|
+| `icon16.png` | 16x16 | Favicon, toolbar (small) |
+| `icon48.png` | 48x48 | Extensions page |
+| `icon128.png` | 128x128 | Chrome Web Store, installation |
 
+## Design
+
+- **Concept**: Magnifying glass with AI sparkle
+- **Style**: Minimalist, monochrome gray on white
+- **Meaning**: "Search for understanding" / "AI-powered insight"
+
+## Source
+
+Original icon: 1024x1024px
+Created: January 2026
