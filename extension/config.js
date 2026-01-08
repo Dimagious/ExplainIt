@@ -21,9 +21,9 @@ const CONFIG = {
       RETRY_DELAY_MS: 1000
     },
     production: {
-      BASE_URL: 'https://api.explainit.app', // TODO: Replace with actual production URL
+      BASE_URL: 'https://dy-budget-helper.ru/explainit',
       EXPLAIN_ENDPOINT: '/api/v1/explain',
-      MOCK_ENDPOINT: '/mock-explain',
+      MOCK_ENDPOINT: '/api/v1/mock-explain',
       USE_MOCK: false,
       TIMEOUT_MS: 30000,
       RETRY_ATTEMPTS: 3,

@@ -9,15 +9,26 @@
  */
 
 // Inline config for Service Worker (MVP - no external dependencies)
+// Detect environment from manifest version
+const isDev = typeof chrome !== 'undefined' && chrome.runtime && 
+              chrome.runtime.getManifest().version.includes('dev');
+
 const config = {
-  ENV: 'development',
-  api: {
+  ENV: isDev ? 'development' : 'production',
+  api: isDev ? {
     BASE_URL: 'http://localhost:3000',
     EXPLAIN_ENDPOINT: '/api/v1/explain',
     MOCK_ENDPOINT: '/api/v1/mock-explain',
     TIMEOUT_MS: 30000,
     RETRY_ATTEMPTS: 2,
     RETRY_DELAY_MS: 1000
+  } : {
+    BASE_URL: 'https://dy-budget-helper.ru/explainit',
+    EXPLAIN_ENDPOINT: '/api/v1/explain',
+    MOCK_ENDPOINT: '/api/v1/mock-explain',
+    TIMEOUT_MS: 30000,
+    RETRY_ATTEMPTS: 3,
+    RETRY_DELAY_MS: 2000
   },
   FEATURES: {
     FALLBACK_TO_MOCK: true,
