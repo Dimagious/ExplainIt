@@ -14,9 +14,6 @@ let retryCount = 0;
 let currentText = null;
 let currentSettings = { language: 'en', tone: 'simple', provider: 'openai' };
 
-// Get config (loaded from config.js in manifest)
-const config = window.ExplainItConfig ? window.ExplainItConfig.getConfig() : null;
-
 /**
  * Create inline popup window
  */
@@ -479,7 +476,13 @@ async function fetchExplanation(text) {
     currentText = text;
     
     // CLIENT-SIDE VALIDATION: Check text before sending
-    if (config && config.FEATURES.CLIENT_VALIDATION) {
+    if (
+      window.ExplainItConfig &&
+      window.ExplainItConfig.CONFIG &&
+      window.ExplainItConfig.CONFIG.FEATURES &&
+      window.ExplainItConfig.CONFIG.FEATURES.CLIENT_VALIDATION &&
+      typeof window.ExplainItConfig.validateText === 'function'
+    ) {
       const validation = window.ExplainItConfig.validateText(text);
       if (!validation.valid) {
         throw new Error(validation.error);
