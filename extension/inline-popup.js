@@ -12,10 +12,7 @@ let settingsPopup = null;
 let settingsPopupShadowRoot = null;
 let retryCount = 0;
 let currentText = null;
-let currentSettings = { language: 'en', tone: 'simple' };
-
-// Get config (loaded from config.js in manifest)
-const config = window.ExplainItConfig ? window.ExplainItConfig.getConfig() : null;
+let currentSettings = { language: 'en', tone: 'simple', provider: 'openai' };
 
 /**
  * Create inline popup window
@@ -327,11 +324,13 @@ function createInlinePopup(selectedText) {
   popupShadowRoot.appendChild(style);
   
   // Load current settings
-  chrome.storage.sync.get(['language', 'tone'], (stored) => {
-    currentSettings = {
-      language: stored.language || 'en',
-      tone: stored.tone || 'simple'
-    };
+  chrome.storage.sync.get(['language', 'tone'], (syncStored) => {
+    chrome.storage.local.get(['provider'], (localStored) => {
+      currentSettings = {
+        language: syncStored.language || 'en',
+        tone: syncStored.tone || 'simple',
+        provider: localStored.provider || 'openai'
+      };
     
     // Add popup structure - show loading immediately
     const popup = document.createElement('div');
@@ -346,6 +345,19 @@ function createInlinePopup(selectedText) {
       </div>
       <div class="content">
         <div class="settings-form" id="inline-settings-form" style="display: none;">
+          <div class="form-group">
+            <label class="form-label">
+              <span>🤖</span>
+              <span>AI Provider</span>
+            </label>
+            <div class="form-description">Choose which provider will generate explanations.</div>
+            <select id="inline-provider-select" class="form-select">
+              <option value="openai" ${currentSettings.provider === 'openai' ? 'selected' : ''}>OpenAI (GPT-4o mini)</option>
+              <option value="anthropic" ${currentSettings.provider === 'anthropic' ? 'selected' : ''}>Anthropic (Claude Haiku)</option>
+              <option value="gemini" ${currentSettings.provider === 'gemini' ? 'selected' : ''}>Google Gemini (Flash)</option>
+              <option value="groq" ${currentSettings.provider === 'groq' ? 'selected' : ''}>Groq (Llama 3.3 70B)</option>
+            </select>
+          </div>
           <div class="form-group">
             <label class="form-label">
               <span>🌍</span>
@@ -403,16 +415,24 @@ function createInlinePopup(selectedText) {
     
     const saveSettingsBtn = popupShadowRoot.querySelector('#inline-save-settings-btn');
     saveSettingsBtn.addEventListener('click', () => {
+      const providerSelect = popupShadowRoot.querySelector('#inline-provider-select');
       const languageSelect = popupShadowRoot.querySelector('#inline-language-select');
       const toneSelect = popupShadowRoot.querySelector('#inline-tone-select');
       
       currentSettings = {
+        provider: providerSelect.value,
         language: languageSelect.value,
         tone: toneSelect.value
       };
       
       // Save settings
-      chrome.storage.sync.set(currentSettings);
+      chrome.storage.sync.set({
+        language: currentSettings.language,
+        tone: currentSettings.tone
+      });
+      chrome.storage.local.set({
+        provider: currentSettings.provider
+      });
       
       // Hide settings form and show loading
       settingsForm.style.display = 'none';
@@ -428,6 +448,7 @@ function createInlinePopup(selectedText) {
     
     // Immediately fetch explanation
     fetchExplanation(selectedText);
+    });
   });
 }
 
@@ -455,7 +476,13 @@ async function fetchExplanation(text) {
     currentText = text;
     
     // CLIENT-SIDE VALIDATION: Check text before sending
-    if (config && config.FEATURES.CLIENT_VALIDATION) {
+    if (
+      window.ExplainItConfig &&
+      window.ExplainItConfig.CONFIG &&
+      window.ExplainItConfig.CONFIG.FEATURES &&
+      window.ExplainItConfig.CONFIG.FEATURES.CLIENT_VALIDATION &&
+      typeof window.ExplainItConfig.validateText === 'function'
+    ) {
       const validation = window.ExplainItConfig.validateText(text);
       if (!validation.valid) {
         throw new Error(validation.error);
@@ -464,11 +491,13 @@ async function fetchExplanation(text) {
     }
     
     // Use current settings (already loaded)
+    const provider = currentSettings.provider || 'openai';
     const language = currentSettings.language || 'en';
     const tone = currentSettings.tone || 'simple';
     
     console.log('[InlinePopup] Requesting explanation via background:', { 
       textLength: text.length, 
+      provider,
       language, 
       tone,
       retryCount 
@@ -493,7 +522,7 @@ async function fetchExplanation(text) {
     retryCount = 0;
     
     // Display result
-    showResult(text, response.result, language, tone);
+    showResult(text, response.result, provider, language, tone);
     
   } catch (error) {
     console.error('[InlinePopup] Error:', error);
@@ -506,12 +535,18 @@ async function fetchExplanation(text) {
  * Show result in popup
  * SECURITY FIX: Uses textContent instead of innerHTML to prevent XSS
  */
-function showResult(originalText, explanation, language, tone) {
+function showResult(originalText, explanation, provider, language, tone) {
   if (!popupShadowRoot) return;
   
   const resultArea = popupShadowRoot.querySelector('#inline-result-area');
   if (!resultArea) return;
   const langLabel = language === 'en' ? '🇬🇧 English' : '🇷🇺 Русский';
+  const providerLabel = ({
+    openai: 'OpenAI',
+    anthropic: 'Anthropic',
+    gemini: 'Gemini',
+    groq: 'Groq'
+  })[provider] || 'OpenAI';
   const toneLabels = {
     simple: 'Simple',
     kid: 'Kid-friendly',
@@ -552,7 +587,7 @@ function showResult(originalText, explanation, language, tone) {
   
   const badge = document.createElement('div');
   badge.className = 'settings-badge';
-  badge.textContent = `${langLabel} • ${toneLabels[tone]}`;
+  badge.textContent = `${providerLabel} • ${langLabel} • ${toneLabels[tone]}`;
   
   const copyBtn = document.createElement('button');
   copyBtn.className = 'copy-btn';
