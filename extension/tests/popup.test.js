@@ -311,7 +311,7 @@ describe('fetchExplanation: API key errors vs retryable errors', () => {
 
     expect(document.getElementById('retry-btn').classList.contains('hidden')).toBe(true);
     expect(document.getElementById('error-settings-btn').classList.contains('hidden')).toBe(false);
-    expect(document.getElementById('error-message').textContent).toContain('No API key configured');
+    expect(document.getElementById('error-message').textContent).toContain('API key issue detected');
   });
 
   test('shows Retry for non-key errors', async () => {

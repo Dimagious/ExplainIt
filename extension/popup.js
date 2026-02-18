@@ -300,6 +300,52 @@ function setKeyStatus(providerId, status, message = '') {
   }
 }
 
+function isKeyRelatedErrorMessage(message = '') {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('no api key') ||
+    normalized.includes('api key') ||
+    normalized.includes('incorrect api key') ||
+    normalized.includes('unauthorized') ||
+    normalized.includes('401')
+  );
+}
+
+function mapUserFacingError(message = '', keyRelatedHint = false) {
+  const normalized = message.toLowerCase();
+
+  if (isKeyRelatedErrorMessage(message) || keyRelatedHint) {
+    return {
+      message: 'API key issue detected.\nOpen Settings, verify provider/key, then click "Test key".',
+      isKeyRelated: true
+    };
+  }
+
+  if (normalized.includes('rate limit') || normalized.includes('429')) {
+    return {
+      message: 'Provider rate limit reached.\nWait a bit and retry, or switch to another provider.',
+      isKeyRelated: false
+    };
+  }
+
+  if (
+    normalized.includes('timed out') ||
+    normalized.includes('timeout') ||
+    normalized.includes('network') ||
+    normalized.includes('fetch')
+  ) {
+    return {
+      message: 'Network/provider timeout.\nCheck connection and retry in a few seconds.',
+      isKeyRelated: false
+    };
+  }
+
+  return {
+    message: message || 'Failed to generate explanation. Please try again.',
+    isKeyRelated: false
+  };
+}
+
 // ─── Settings UI ──────────────────────────────────────────────────────────────
 
 function updateSettingsUI() {
@@ -700,9 +746,8 @@ async function fetchExplanation(text) {
     clearTimeout(timeoutId);
 
     if (!response?.success) {
-      const isNoKeyError = response?.error?.toLowerCase().includes('no api key') ||
-                           response?.error?.toLowerCase().includes('api key');
-      throw Object.assign(new Error(response?.error || 'Failed to fetch explanation'), { isNoKeyError });
+      const rawError = response?.error || 'Failed to fetch explanation';
+      throw Object.assign(new Error(rawError), { isNoKeyError: isKeyRelatedErrorMessage(rawError) });
     }
 
     hideLoadingState();
@@ -718,7 +763,8 @@ async function fetchExplanation(text) {
     }
 
     console.error('[ExplainIt] Error fetching explanation:', error);
-    showErrorState(error.message, text, error.isNoKeyError);
+    const mapped = mapUserFacingError(error.message, error.isNoKeyError);
+    showErrorState(mapped.message, text, mapped.isKeyRelated);
   } finally {
     abortController = null;
   }

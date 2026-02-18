@@ -149,6 +149,35 @@ function saveInlineSettings(nextSettings, callback) {
   );
 }
 
+function mapInlineErrorMessage(message = '') {
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes('no api key') ||
+    normalized.includes('api key') ||
+    normalized.includes('incorrect api key') ||
+    normalized.includes('unauthorized') ||
+    normalized.includes('401')
+  ) {
+    return 'API key issue detected. Open settings, verify provider/key, test key, then retry.';
+  }
+
+  if (normalized.includes('rate limit') || normalized.includes('429')) {
+    return 'Provider rate limit reached. Wait a bit, retry, or switch provider.';
+  }
+
+  if (
+    normalized.includes('timed out') ||
+    normalized.includes('timeout') ||
+    normalized.includes('network') ||
+    normalized.includes('fetch')
+  ) {
+    return 'Network/provider timeout. Check connection and retry in a few seconds.';
+  }
+
+  return message || 'Failed to generate explanation. Please retry.';
+}
+
 /**
  * Create inline popup window
  */
@@ -963,7 +992,7 @@ async function fetchExplanation(text) {
   } catch (error) {
     console.error('[InlinePopup] Error:', error);
 
-    showError(error.message, text);
+    showError(mapInlineErrorMessage(error.message), text);
   }
 }
 
