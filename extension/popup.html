@@ -64,7 +64,10 @@
         <div id="error-state" class="content-section hidden">
           <div class="error-icon">⚠️</div>
           <p id="error-message" class="error-message"></p>
-          <button id="retry-btn" class="btn btn-primary">Retry</button>
+          <div class="error-actions">
+            <button id="retry-btn" class="btn btn-primary">Retry</button>
+            <button id="error-settings-btn" class="btn btn-secondary hidden">Open Settings</button>
+          </div>
         </div>
 
         <!-- Empty state (no text selected) -->
@@ -72,7 +75,7 @@
           <div class="empty-icon">📝</div>
           <h2 class="empty-title">Select text to explain</h2>
           <p class="empty-description">
-            Highlight any text on a webpage, click the ExplainIt icon, 
+            Highlight any text on a webpage, click the ExplainIt icon,
             and get an instant AI-powered explanation.
           </p>
           <div class="empty-features">
@@ -93,7 +96,7 @@
       </main>
     </div>
 
-    <!-- TASK-022: Settings Screen Component -->
+    <!-- Settings Screen -->
     <div id="settings-screen" class="screen" style="display: none;">
       <header class="popup-header">
         <button id="back-btn" class="icon-btn" aria-label="Back" title="Back">
@@ -106,7 +109,80 @@
       </header>
 
       <main class="popup-content">
+        <!-- First-run welcome notice -->
+        <div id="welcome-notice" class="welcome-notice hidden">
+          👋 Choose a provider and add your API key to get started
+        </div>
+
         <form id="settings-form" class="settings-form">
+
+          <!-- Provider Selection -->
+          <div class="form-group">
+            <label class="form-label">
+              <span class="label-icon">🤖</span>
+              AI Provider
+            </label>
+            <div class="provider-grid" id="provider-grid">
+              <label class="provider-card" data-provider="openai">
+                <input type="radio" name="provider" value="openai" />
+                <div class="provider-card-inner">
+                  <span class="provider-name">OpenAI</span>
+                  <span class="provider-model">GPT-4o mini</span>
+                </div>
+              </label>
+              <label class="provider-card" data-provider="anthropic">
+                <input type="radio" name="provider" value="anthropic" />
+                <div class="provider-card-inner">
+                  <span class="provider-name">Anthropic</span>
+                  <span class="provider-model">Claude Haiku</span>
+                </div>
+              </label>
+              <label class="provider-card" data-provider="gemini">
+                <input type="radio" name="provider" value="gemini" />
+                <div class="provider-card-inner">
+                  <span class="provider-name">Google</span>
+                  <span class="provider-model">Gemini Flash</span>
+                </div>
+              </label>
+              <label class="provider-card" data-provider="groq">
+                <input type="radio" name="provider" value="groq" />
+                <div class="provider-card-inner">
+                  <span class="provider-name">Groq ⚡</span>
+                  <span class="provider-model">Llama 3.3 70B</span>
+                  <span class="provider-badge">Free tier</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- API Key -->
+          <div class="form-group">
+            <label for="api-key-input" class="form-label">
+              <span class="label-icon">🔑</span>
+              API Key
+            </label>
+            <div class="api-key-wrapper">
+              <input
+                type="password"
+                id="api-key-input"
+                class="form-input"
+                placeholder="Paste your API key here"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <button type="button" id="toggle-key-btn" class="toggle-key-btn" title="Show / hide key" aria-label="Show / hide key">
+                <svg id="eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+            <p class="form-hint">
+              <a id="get-key-link" href="#" target="_blank" class="form-link">Get API key →</a>
+              &nbsp;·&nbsp; Stored locally on this device only
+            </p>
+          </div>
+
           <!-- Language Selection (US-010) -->
           <div class="form-group">
             <label for="language-select" class="form-label">

@@ -1,334 +1,336 @@
 /**
  * Background Service Worker for ExplainIt!
- * US-022: Content Script → Popup Communication
- * TASK-097: Background message listener
- * TASK-098: Text storage by tabId
- * 
- * REFACTORED: Network resilience (timeout, retry, fallback)
- * SECURITY: Uses config for API URLs
+ * Multi-provider direct API calls: OpenAI, Anthropic, Google Gemini, Groq
+ * No backend server required — calls AI providers directly using user's API key.
  */
 
-// Inline config for Service Worker (MVP - no external dependencies)
-// Detect environment from manifest version
-const isDev = typeof chrome !== 'undefined' && chrome.runtime && 
-              chrome.runtime.getManifest().version.includes('dev');
+// ─── Provider configs (inline to keep service worker self-contained) ──────────
 
-const config = {
-  ENV: isDev ? 'development' : 'production',
-  api: isDev ? {
-    BASE_URL: 'http://localhost:3000',
-    EXPLAIN_ENDPOINT: '/api/v1/explain',
-    MOCK_ENDPOINT: '/api/v1/mock-explain',
-    TIMEOUT_MS: 30000,
-    RETRY_ATTEMPTS: 2,
-    RETRY_DELAY_MS: 1000
-  } : {
-    BASE_URL: 'https://dy-budget-helper.ru/explainit',
-    EXPLAIN_ENDPOINT: '/api/v1/explain',
-    MOCK_ENDPOINT: '/api/v1/mock-explain',
-    TIMEOUT_MS: 30000,
-    RETRY_ATTEMPTS: 3,
-    RETRY_DELAY_MS: 2000
+const PROVIDER_CONFIGS = {
+  openai: {
+    url: 'https://api.openai.com/v1/chat/completions',
+    model: 'gpt-4o-mini',
+    type: 'openai'
   },
-  FEATURES: {
-    FALLBACK_TO_MOCK: true,
-    NETWORK_RESILIENCE: true
+  anthropic: {
+    url: 'https://api.anthropic.com/v1/messages',
+    model: 'claude-3-5-haiku-20241022',
+    type: 'anthropic'
   },
-  getApiUrl: function(useMock) {
-    return this.api.BASE_URL + (useMock ? this.api.MOCK_ENDPOINT : this.api.EXPLAIN_ENDPOINT);
+  gemini: {
+    url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+    model: 'gemini-1.5-flash',
+    type: 'gemini'
+  },
+  groq: {
+    url: 'https://api.groq.com/openai/v1/chat/completions',
+    model: 'llama-3.3-70b-versatile',
+    type: 'openai' // OpenAI-compatible
   }
 };
 
-console.log('[Background] ExplainIt! Background service worker initialized');
-console.log('[Background] Environment:', config.ENV);
-console.log('[Background] API URL:', config.getApiUrl());
+// ─── Prompt templates (inline, mirrors config.js PROMPTS) ────────────────────
 
-// TASK-098: Store selected text per tab
-const textStorage = new Map(); // tabId -> { text, timestamp }
+const PROMPTS = {
+  simple: {
+    en: 'Explain the following text in simple words that any adult can understand. Keep it concise (2-4 sentences). Do not use jargon.\n\nText:\n{text}',
+    ru: 'Объясни следующий текст простыми словами, понятными любому взрослому человеку. Будь краток (2-4 предложения). Не используй жаргон.\n\nТекст:\n{text}'
+  },
+  kid: {
+    en: "Explain the following text as if talking to a 5-year-old child. Use very simple words, short sentences, and a fun comparison if possible.\n\nText:\n{text}",
+    ru: 'Объясни следующий текст так, как будто ты разговариваешь с 5-летним ребёнком. Используй очень простые слова, короткие предложения и интересное сравнение, если возможно.\n\nТекст:\n{text}'
+  },
+  expert: {
+    en: 'Provide a precise, technical explanation of the following text for a professional audience. Use appropriate terminology and cover key nuances.\n\nText:\n{text}',
+    ru: 'Предоставь точное техническое объяснение следующего текста для профессиональной аудитории. Используй соответствующую терминологию и раскрой ключевые нюансы.\n\nТекст:\n{text}'
+  }
+};
 
-/**
- * Fetch with timeout
- * @param {string} url - URL to fetch
- * @param {object} options - Fetch options
- * @param {number} timeout - Timeout in ms
- * @returns {Promise<Response>}
- */
-async function fetchWithTimeout(url, options = {}, timeout = 30000) {
+const TIMEOUT_MS = 30000;
+const RETRY_ATTEMPTS = 2;
+const RETRY_DELAY_MS = 1000;
+
+// ─── Text storage (tabId → { text, timestamp }) ───────────────────────────────
+
+const textStorage = new Map();
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function buildPrompt(text, tone, language) {
+  const tonePrompts = PROMPTS[tone] || PROMPTS.simple;
+  const template = tonePrompts[language] || tonePrompts.en;
+  return template.replace('{text}', text);
+}
+
+async function fetchWithTimeout(url, options = {}) {
   const controller = new AbortController();
-  const signal = controller.signal;
-  
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-  
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
   try {
-    const response = await fetch(url, { ...options, signal });
+    const response = await fetch(url, { ...options, signal: controller.signal });
     clearTimeout(timeoutId);
     return response;
   } catch (error) {
     clearTimeout(timeoutId);
     if (error.name === 'AbortError') {
-      throw new Error('Request timeout');
+      throw new Error('Request timed out');
     }
     throw error;
   }
 }
 
+// ─── Provider-specific API callers ───────────────────────────────────────────
+
 /**
- * Sleep utility for retry delay
- * @param {number} ms - Milliseconds to sleep
- * @returns {Promise<void>}
+ * OpenAI-compatible call (used by OpenAI and Groq)
  */
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+async function callOpenAICompatible(url, apiKey, model, prompt) {
+  const response = await fetchWithTimeout(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 500,
+      temperature: 0.7
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const err = new Error(errorData.error?.message || `HTTP ${response.status}`);
+    err.status = response.status;
+    throw err;
+  }
+
+  const data = await response.json();
+  const result = data.choices?.[0]?.message?.content;
+  if (!result) throw new Error('Empty response from provider');
+  return result;
 }
 
 /**
- * Fetch explanation with retry and fallback logic
- * NETWORK RESILIENCE: timeout, retry with exponential backoff, fallback to mock
- * 
- * @param {string} text - Text to explain
- * @param {string} tone - Tone setting
- * @param {string} language - Language setting
- * @param {number} retryCount - Current retry attempt
- * @returns {Promise<object>} Response with {success, result?, error?}
+ * Anthropic Messages API
  */
-async function fetchExplanationWithResilience(text, tone, language, retryCount = 0) {
-  const maxRetries = config.api.RETRY_ATTEMPTS;
-  const timeout = config.api.TIMEOUT_MS;
-  const baseDelay = config.api.RETRY_DELAY_MS;
-  
+async function callAnthropic(apiKey, model, prompt) {
+  const response = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 500,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const err = new Error(errorData.error?.message || `HTTP ${response.status}`);
+    err.status = response.status;
+    throw err;
+  }
+
+  const data = await response.json();
+  const result = data.content?.[0]?.text;
+  if (!result) throw new Error('Empty response from provider');
+  return result;
+}
+
+/**
+ * Google Gemini API
+ */
+async function callGemini(apiKey, model, prompt) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const response = await fetchWithTimeout(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: 500, temperature: 0.7 }
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const err = new Error(errorData.error?.message || `HTTP ${response.status}`);
+    err.status = response.status;
+    throw err;
+  }
+
+  const data = await response.json();
+  const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!result) throw new Error('Empty response from provider');
+  return result;
+}
+
+/**
+ * Dispatch to the correct provider caller
+ */
+async function callProvider(providerId, apiKey, text, tone, language) {
+  const providerCfg = PROVIDER_CONFIGS[providerId] || PROVIDER_CONFIGS.openai;
+  const prompt = buildPrompt(text, tone, language);
+
+  switch (providerCfg.type) {
+    case 'anthropic':
+      return callAnthropic(apiKey, providerCfg.model, prompt);
+    case 'gemini':
+      return callGemini(apiKey, providerCfg.model, prompt);
+    default: // 'openai' — also handles groq
+      return callOpenAICompatible(providerCfg.url, apiKey, providerCfg.model, prompt);
+  }
+}
+
+// ─── Resilience wrapper (retry with exponential backoff) ─────────────────────
+
+async function fetchExplanationWithResilience(providerId, apiKey, text, tone, language) {
   let lastError = null;
-  
-  // Try main API with retries
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+
+  for (let attempt = 0; attempt <= RETRY_ATTEMPTS; attempt++) {
     try {
-      console.log(`[Background] Attempt ${attempt + 1}/${maxRetries + 1} - Fetching explanation`);
-      
-      const apiUrl = config.getApiUrl(false); // Use real API
-      
-      const response = await fetchWithTimeout(
-        apiUrl,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({ text, tone, language })
-        },
-        timeout
-      );
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.error || `HTTP ${response.status}`;
-        
-        // Check if we should retry
-        const shouldRetry = response.status >= 500 || response.status === 429;
-        
-        if (shouldRetry && attempt < maxRetries) {
-          console.warn(`[Background] Retryable error (${response.status}), will retry...`);
-          lastError = new Error(errorMsg);
-          
-          // Exponential backoff
-          const delay = baseDelay * Math.pow(2, attempt);
-          await sleep(delay);
-          continue; // Retry
-        }
-        
-        // Non-retryable error or max retries reached
-        throw new Error(errorMsg);
-      }
-      
-      const data = await response.json();
-      
-      if (!data.result) {
-        throw new Error('Empty response from server');
-      }
-      
-      console.log('[Background] Successfully got explanation');
-      return { success: true, result: data.result };
-      
+      console.log(`[Background] Attempt ${attempt + 1}/${RETRY_ATTEMPTS + 1} — provider: ${providerId}`);
+
+      const result = await callProvider(providerId, apiKey, text, tone, language);
+      console.log('[Background] Explanation received successfully');
+      return { success: true, result };
+
     } catch (error) {
       console.error(`[Background] Attempt ${attempt + 1} failed:`, error.message);
       lastError = error;
-      
-      // Check if we should retry
-      const isNetworkError = error.message.includes('timeout') || 
-                            error.message.includes('network') ||
-                            error.message.includes('fetch');
-      
-      if (isNetworkError && attempt < maxRetries) {
-        console.log('[Background] Network error, will retry...');
-        const delay = baseDelay * Math.pow(2, attempt);
+
+      const isRetryable =
+        error.message.includes('timeout') ||
+        error.message.includes('network') ||
+        error.message.includes('fetch') ||
+        error.status >= 500 ||
+        error.status === 429;
+
+      if (isRetryable && attempt < RETRY_ATTEMPTS) {
+        const delay = RETRY_DELAY_MS * Math.pow(2, attempt);
+        console.log(`[Background] Retrying in ${delay}ms...`);
         await sleep(delay);
-        continue; // Retry
+        continue;
       }
-      
-      // Don't retry on last attempt
-      if (attempt >= maxRetries) {
-        break;
-      }
+
+      break;
     }
   }
-  
-  // All retries failed - try fallback to mock if enabled
-  if (config.FEATURES.FALLBACK_TO_MOCK) {
-    console.log('[Background] All retries failed, trying mock fallback...');
-    
-    try {
-      const mockUrl = config.getApiUrl(true); // Use mock API
-      
-      const response = await fetchWithTimeout(
-        mockUrl,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({ text, tone, language })
-        },
-        timeout
-      );
-      
-      if (!response.ok) {
-        throw new Error(`Mock API failed: HTTP ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      console.log('[Background] Mock fallback successful');
-      return { 
-        success: true, 
-        result: data.result,
-        isMock: true 
-      };
-      
-    } catch (mockError) {
-      console.error('[Background] Mock fallback also failed:', mockError);
-    }
-  }
-  
-  // Everything failed
-  console.error('[Background] All attempts failed');
-  return { 
-    success: false, 
-    error: lastError?.message || 'Failed to fetch explanation' 
+
+  return {
+    success: false,
+    error: lastError?.message || 'Failed to fetch explanation'
   };
 }
 
-/**
- * TASK-097: Listen for messages from content script
- */
+// ─── Message listener ─────────────────────────────────────────────────────────
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[Background] Message received:', message.type, 'from tab:', sender.tab?.id);
-  
-  // US-022: Handle selected text from content script
+
+  // Store selected text from content script
   if (message.type === 'SELECTED_TEXT') {
     const tabId = sender.tab?.id;
-    
     if (!tabId) {
-      console.error('[Background] No tabId in sender');
       sendResponse({ success: false, error: 'No tab ID' });
       return true;
     }
-    
-    // TASK-098: Store text with metadata
     textStorage.set(tabId, {
       text: message.text,
       timestamp: Date.now(),
       url: sender.tab.url
     });
-    
     console.log('[Background] Stored text for tab', tabId, ':', message.text.substring(0, 50) + '...');
-    
     sendResponse({ success: true });
     return true;
   }
-  
-  // FETCH_EXPLANATION: Proxy API call with resilience
+
+  // Fetch explanation using the user's selected provider and API key
   if (message.type === 'FETCH_EXPLANATION') {
-    const { text, tone, language, retryCount = 0 } = message;
-    
-    console.log('[Background] Fetching explanation:', { 
-      textLength: text.length, 
-      tone, 
-      language,
-      retryCount 
-    });
-    
-    // Use async function with resilience
-    fetchExplanationWithResilience(text, tone, language, retryCount)
-      .then(result => {
-        if (result.isMock) {
-          console.log('[Background] Sending mock result to content script');
-        }
-        sendResponse(result);
-      })
-      .catch(error => {
-        console.error('[Background] Unexpected error:', error);
-        sendResponse({ 
-          success: false, 
-          error: 'Unexpected error: ' + error.message 
+    const { text, tone, language } = message;
+
+    chrome.storage.local.get(['provider', 'apiKeys'], (stored) => {
+      const providerId = stored.provider || 'openai';
+      const apiKeys = stored.apiKeys || {};
+      const apiKey = apiKeys[providerId] || '';
+
+      if (!apiKey) {
+        sendResponse({
+          success: false,
+          error: 'No API key configured. Open Settings and add your API key.'
         });
-      });
-    
+        return;
+      }
+
+      fetchExplanationWithResilience(providerId, apiKey, text, tone, language)
+        .then(result => sendResponse(result))
+        .catch(error => sendResponse({ success: false, error: error.message }));
+    });
+
     return true; // Keep channel open for async response
   }
-  
-  // TASK-099: Popup requests stored text
+
+  // Return stored text to popup
   if (message.type === 'GET_SELECTED_TEXT') {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const activeTabId = tabs[0]?.id;
-      
       if (!activeTabId) {
         sendResponse({ success: false, error: 'No active tab' });
         return;
       }
-      
+
       const stored = textStorage.get(activeTabId);
-      
       if (stored) {
         console.log('[Background] Returning stored text for tab', activeTabId);
-        sendResponse({
-          success: true,
-          text: stored.text,
-          timestamp: stored.timestamp
-        });
-        
-        // Clean up after retrieval
+        sendResponse({ success: true, text: stored.text, timestamp: stored.timestamp });
         textStorage.delete(activeTabId);
       } else {
         console.log('[Background] No stored text for tab', activeTabId);
-        sendResponse({
-          success: false,
-          error: 'No text stored'
-        });
+        sendResponse({ success: false, error: 'No text stored' });
       }
     });
-    
-    return true; // Keep channel open for async response
+
+    return true;
   }
-  
+
   return false;
 });
 
-// TASK-100: Clean up old stored text (older than 5 minutes)
+// ─── Cleanup stored text older than 5 minutes ─────────────────────────────────
+
 setInterval(() => {
   const now = Date.now();
   const FIVE_MINUTES = 5 * 60 * 1000;
-  
   for (const [tabId, data] of textStorage.entries()) {
     if (now - data.timestamp > FIVE_MINUTES) {
       console.log('[Background] Cleaning up old text for tab', tabId);
       textStorage.delete(tabId);
     }
   }
-}, 60000); // Check every minute
+}, 60000);
 
-console.log('[Background] Message listeners registered');
-console.log('[Background] Network resilience enabled: timeout=%dms, retries=%d, fallback=%s',
-  config.api.TIMEOUT_MS,
-  config.api.RETRY_ATTEMPTS,
-  config.FEATURES.FALLBACK_TO_MOCK ? 'enabled' : 'disabled'
-);
+console.log('[Background] ExplainIt! service worker initialized (multi-provider mode)');
+
+// Export pure functions for testing (no-op in service worker context)
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    buildPrompt,
+    callOpenAICompatible,
+    callAnthropic,
+    callGemini,
+    callProvider,
+    fetchExplanationWithResilience,
+    PROVIDER_CONFIGS,
+    PROMPTS
+  };
+}
