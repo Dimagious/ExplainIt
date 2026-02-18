@@ -1192,3 +1192,14 @@ document.addEventListener('click', (e) => {
     removeInlinePopup();
   }
 });
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    createInlinePopup,
+    removeInlinePopup,
+    fetchExplanation,
+    mapInlineErrorMessage,
+    loadInlineSettings,
+    saveInlineSettings
+  };
+}
