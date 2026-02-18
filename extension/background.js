@@ -1,7 +1,7 @@
 /**
  * Background Service Worker for ExplainIt!
  * Multi-provider direct API calls: OpenAI, Anthropic, Google Gemini, Groq
- * No backend server required — calls AI providers directly using user's API key.
+ * Calls AI providers directly using user's API key.
  */
 
 // ─── Provider configs (inline to keep service worker self-contained) ──────────

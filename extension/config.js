@@ -43,7 +43,7 @@ const PROVIDERS = {
   }
 };
 
-// Prompts for each tone and language (moved from backend/services/promptBuilder.js)
+// Prompts for each tone and language
 const PROMPTS = {
   simple: {
     en: 'Explain the following text in simple words that any adult can understand. Keep it concise (2-4 sentences). Do not use jargon.\n\nText:\n{text}',

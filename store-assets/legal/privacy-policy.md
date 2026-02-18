@@ -1,110 +1,78 @@
 # Privacy Policy for ExplainIt! Chrome Extension
 
-**Last Updated:** January 6, 2026
+**Last Updated:** February 18, 2026
 
 ## Introduction
 
-ExplainIt! ("we", "our", or "the extension") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard information when you use our Chrome extension.
+ExplainIt! is a Chrome extension that generates explanations for text you explicitly select.
+We aim to minimize data collection and clearly explain what is processed.
 
-## Information We Collect
+## How the Extension Works
 
-### Text You Select
-When you use ExplainIt!, we process the text you explicitly select on webpages to generate explanations. This text is:
-- Sent to our secure backend server
-- Forwarded to OpenAI API for processing
-- **Not stored** after the explanation is generated
-- **Not used** for any purpose other than generating your explanation
+ExplainIt! works in direct provider mode:
+- Selected text is sent from the extension to the AI provider chosen by the user.
 
-### Settings and Preferences
-We store your preferences locally using Chrome's Storage API:
-- Preferred language (English/Russian)
-- Preferred complexity level (Simple/Kid/Expert)
+## Information Processed
 
-These settings are stored locally on your device and synced across your Chrome browsers if you're signed in to Chrome. We do not have access to these settings.
+### Selected Text
+When you request an explanation:
+- The selected text is sent to your selected AI provider.
+- The provider returns the explanation to your extension.
+- We do not store this text ourselves.
+
+### Settings and API Keys
+We use Chrome extension storage:
+- `chrome.storage.local`: selected provider + provider API keys
+- `chrome.storage.sync`: language + tone preferences
+
+We do not have direct access to your browser storage values.
 
 ## Information We Do NOT Collect
 
-We explicitly do NOT collect:
-- ❌ Browsing history
-- ❌ Personal identification information
-- ❌ Email addresses or account information
-- ❌ Cookies or tracking data
-- ❌ Location data
-- ❌ Device information
-- ❌ Analytics or usage statistics
-- ❌ The content of pages you visit (only text you explicitly select)
+We do not collect:
+- Browsing history
+- Identity/account data
+- Location data
+- Cookies or tracking identifiers
+- Analytics telemetry from extension usage
 
-## How We Use Information
+## Third-Party Providers
 
-The selected text you send is used solely to:
-1. Generate an AI-powered explanation
-2. Return that explanation to you immediately
+Your selected provider processes the selected text under their own terms and privacy policy.
+Supported providers include OpenAI, Anthropic, Google Gemini, and Groq.
 
-We do not:
-- Store your selected text
-- Use it to train AI models
-- Share it with third parties (except OpenAI for processing)
-- Create user profiles
+Reference links:
+- OpenAI: https://openai.com/privacy
+- Anthropic: https://www.anthropic.com/privacy
+- Google: https://policies.google.com/privacy
+- Groq: https://groq.com/privacy-policy
 
-## Third-Party Services
+## Security
 
-### OpenAI
-We use OpenAI's API (GPT-4o-mini model) to generate explanations. When you request an explanation:
-- Your selected text is sent to OpenAI
-- OpenAI processes the request and returns an explanation
-- OpenAI's privacy policy applies to their processing: https://openai.com/privacy
-
-OpenAI does not use data submitted via API for training their models (as per their API data usage policy).
-
-## Data Security
-
-We implement security measures to protect your information:
-- ✅ HTTPS encryption for all communications
-- ✅ API keys stored securely on backend (never in extension)
-- ✅ Input sanitization to prevent malicious content
-- ✅ Rate limiting to prevent abuse
-- ✅ No persistent storage of user data
+- Provider requests use HTTPS
+- API keys are kept in local extension storage (not sync by default)
+- UI rendering uses safe text handling
 
 ## Data Retention
 
-- **Selected text**: Not retained. Processed and immediately discarded.
-- **Explanations**: Not retained on our servers. Displayed only in your browser.
-- **Settings**: Stored locally on your device via Chrome Storage API.
-
-## Your Rights
-
-You have the right to:
-- **Access**: View your stored settings in Chrome extension settings
-- **Delete**: Remove the extension to delete all local data
-- **Opt-out**: Simply don't use the extension
-
-## Children's Privacy
-
-ExplainIt! is suitable for users of all ages. We do not knowingly collect personal information from children. The extension processes text to generate explanations regardless of user age, without collecting any personal data.
-
-## Changes to This Policy
-
-We may update this Privacy Policy from time to time. We will notify users of any material changes by updating the "Last Updated" date at the top of this policy.
-
-## Contact Us
-
-If you have questions about this Privacy Policy, please contact us at:
-
-📧 Email: dimasta7@gmail.com
+- Selected text: processed for request/response, not retained by us
+- Explanations: shown in your browser
+- Settings: stored in browser extension storage until changed/removed
 
 ## Permissions Explained
 
-Our extension requests the following permissions:
-
 | Permission | Why We Need It |
 |------------|----------------|
-| `activeTab` | To detect text selection on the current page |
-| `storage` | To save your language and tone preferences |
-| `host_permissions` | To communicate with our backend API |
+| `storage` | Save provider, API keys, and preferences |
+| `host_permissions` | Access only supported AI provider APIs |
 
-We request only the minimum permissions necessary for the extension to function.
+## Your Rights and Control
 
----
+You can:
+- Change provider and preferences at any time
+- Remove API keys from settings
+- Uninstall extension to remove local extension data
 
-© 2026 ExplainIt! All rights reserved.
+## Contact
 
+Email: dimasta7@gmail.com

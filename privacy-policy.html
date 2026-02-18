@@ -5,12 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Privacy Policy - ExplainIt!</title>
     <style>
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            max-width: 800px;
+            max-width: 840px;
             margin: 0 auto;
             padding: 40px 20px;
             line-height: 1.7;
@@ -18,194 +16,172 @@
             background: #fafafa;
         }
         .container {
-            background: white;
-            padding: 40px;
+            background: #fff;
+            padding: 36px;
             border-radius: 12px;
             box-shadow: 0 2px 12px rgba(0,0,0,0.08);
         }
         h1 {
-            color: #4A90E2;
+            color: #1f6fb2;
             margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
         }
         .updated {
-            color: #888;
+            color: #777;
             font-size: 14px;
             margin-bottom: 30px;
         }
         h2 {
             color: #333;
-            margin-top: 35px;
+            margin-top: 34px;
             padding-bottom: 8px;
-            border-bottom: 2px solid #4A90E2;
+            border-bottom: 2px solid #1f6fb2;
         }
         h3 {
             color: #555;
-            margin-top: 25px;
+            margin-top: 22px;
         }
-        ul {
-            padding-left: 20px;
-        }
-        li {
-            margin: 8px 0;
-        }
+        ul { padding-left: 22px; }
+        li { margin: 8px 0; }
         table {
             border-collapse: collapse;
             width: 100%;
-            margin: 20px 0;
+            margin: 18px 0;
         }
         th, td {
             border: 1px solid #ddd;
-            padding: 12px 15px;
+            padding: 12px 14px;
             text-align: left;
         }
         th {
-            background: #4A90E2;
-            color: white;
+            background: #1f6fb2;
+            color: #fff;
         }
-        tr:nth-child(even) {
-            background: #f9f9f9;
-        }
-        .emoji {
-            font-size: 18px;
-            margin-right: 8px;
-        }
-        a {
-            color: #4A90E2;
-        }
-        .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-            text-align: center;
-            color: #888;
-            font-size: 14px;
-        }
+        tr:nth-child(even) { background: #f8f8f8; }
         .highlight {
-            background: #e8f4fc;
-            padding: 15px 20px;
+            background: #eef6fd;
+            border-left: 4px solid #1f6fb2;
             border-radius: 8px;
-            border-left: 4px solid #4A90E2;
-            margin: 20px 0;
+            padding: 14px 18px;
+            margin: 16px 0;
+        }
+        a { color: #1f6fb2; }
+        .footer {
+            margin-top: 34px;
+            border-top: 1px solid #ececec;
+            padding-top: 18px;
+            color: #777;
+            font-size: 14px;
+            text-align: center;
+        }
+        code {
+            background: #f0f3f5;
+            padding: 2px 6px;
+            border-radius: 6px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🔍 Privacy Policy for ExplainIt!</h1>
-        <p class="updated"><strong>Last Updated:</strong> January 6, 2026</p>
+        <h1>Privacy Policy for ExplainIt!</h1>
+        <p class="updated"><strong>Last Updated:</strong> February 18, 2026</p>
 
         <h2>Introduction</h2>
-        <p>ExplainIt! ("we", "our", or "the extension") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard information when you use our Chrome extension.</p>
+        <p>
+            ExplainIt! ("we", "our", or "the extension") explains text selected by the user in Chrome.
+            We are committed to minimizing data collection and being transparent about what is processed.
+        </p>
 
-        <h2>Information We Collect</h2>
-        
-        <h3>Text You Select</h3>
-        <p>When you use ExplainIt!, we process the text you explicitly select on webpages to generate explanations. This text is:</p>
+        <h2>How ExplainIt Works</h2>
+        <p>
+            ExplainIt! works in direct provider mode. Selected text is sent from the extension to the AI provider
+            chosen by the user.
+        </p>
+
+        <h2>Information Processed</h2>
+
+        <h3>Selected Text</h3>
         <ul>
-            <li>Sent to our secure backend server</li>
-            <li>Forwarded to OpenAI API for processing</li>
-            <li><strong>Not stored</strong> after the explanation is generated</li>
-            <li><strong>Not used</strong> for any purpose other than generating your explanation</li>
+            <li>You explicitly select text on a webpage.</li>
+            <li>The selected text is sent to your chosen AI provider to generate an explanation.</li>
+            <li>We do not store selected text on our servers.</li>
         </ul>
 
-        <h3>Settings and Preferences</h3>
-        <p>We store your preferences locally using Chrome's Storage API:</p>
+        <h3>Settings and API Keys</h3>
         <ul>
-            <li>Preferred language (English/Russian)</li>
-            <li>Preferred complexity level (Simple/Kid/Expert)</li>
+            <li><strong>Local storage only:</strong> selected provider and provider API keys (<code>chrome.storage.local</code>).</li>
+            <li><strong>Sync storage:</strong> language and tone preferences (<code>chrome.storage.sync</code>).</li>
+            <li>We do not have direct access to your browser local/sync storage.</li>
         </ul>
-        <p>These settings are stored locally on your device and synced across your Chrome browsers if you're signed in. <strong>We do not have access to these settings.</strong></p>
 
         <h2>Information We Do NOT Collect</h2>
         <div class="highlight">
-            <p>We explicitly do <strong>NOT</strong> collect:</p>
             <ul>
-                <li><span class="emoji">❌</span> Browsing history</li>
-                <li><span class="emoji">❌</span> Personal identification information</li>
-                <li><span class="emoji">❌</span> Email addresses or account information</li>
-                <li><span class="emoji">❌</span> Cookies or tracking data</li>
-                <li><span class="emoji">❌</span> Location data</li>
-                <li><span class="emoji">❌</span> Device information</li>
-                <li><span class="emoji">❌</span> Analytics or usage statistics</li>
-                <li><span class="emoji">❌</span> The content of pages you visit (only text you explicitly select)</li>
+                <li>Browsing history</li>
+                <li>Account identity data (name, email, phone)</li>
+                <li>Location data</li>
+                <li>Cookies or cross-site tracking identifiers</li>
+                <li>Analytics or telemetry from extension usage</li>
             </ul>
         </div>
 
-        <h2>How We Use Information</h2>
-        <p>The selected text you send is used solely to:</p>
-        <ol>
-            <li>Generate an AI-powered explanation</li>
-            <li>Return that explanation to you immediately</li>
-        </ol>
-        <p>We do not store your selected text, use it to train AI models, share it with third parties (except OpenAI for processing), or create user profiles.</p>
-
-        <h2>Third-Party Services</h2>
-        <h3>OpenAI</h3>
-        <p>We use OpenAI's API (GPT-4o-mini model) to generate explanations. When you request an explanation:</p>
+        <h2>Third-Party AI Providers</h2>
+        <p>
+            You choose which provider receives the selected text. Their terms and privacy policies apply to that processing.
+            Supported providers include OpenAI, Anthropic, Google Gemini, and Groq.
+        </p>
         <ul>
-            <li>Your selected text is sent to OpenAI</li>
-            <li>OpenAI processes the request and returns an explanation</li>
-            <li>OpenAI's privacy policy applies: <a href="https://openai.com/privacy" target="_blank">https://openai.com/privacy</a></li>
+            <li>OpenAI: <a href="https://openai.com/privacy" target="_blank" rel="noopener noreferrer">https://openai.com/privacy</a></li>
+            <li>Anthropic: <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener noreferrer">https://www.anthropic.com/privacy</a></li>
+            <li>Google: <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">https://policies.google.com/privacy</a></li>
+            <li>Groq: <a href="https://groq.com/privacy-policy" target="_blank" rel="noopener noreferrer">https://groq.com/privacy-policy</a></li>
         </ul>
-        <p><strong>Note:</strong> OpenAI does not use data submitted via API for training their models (as per their API data usage policy).</p>
 
-        <h2>Data Security</h2>
+        <h2>Security</h2>
         <ul>
-            <li><span class="emoji">✅</span> HTTPS encryption for all communications</li>
-            <li><span class="emoji">✅</span> API keys stored securely on backend (never in extension)</li>
-            <li><span class="emoji">✅</span> Input sanitization to prevent malicious content</li>
-            <li><span class="emoji">✅</span> Rate limiting to prevent abuse</li>
-            <li><span class="emoji">✅</span> No persistent storage of user data</li>
+            <li>Provider API calls use HTTPS.</li>
+            <li>API keys are kept in local extension storage, not synced across devices by default.</li>
+            <li>UI output is rendered with safe text handling to reduce XSS risk.</li>
         </ul>
 
         <h2>Data Retention</h2>
         <ul>
-            <li><strong>Selected text:</strong> Not retained. Processed and immediately discarded.</li>
-            <li><strong>Explanations:</strong> Not retained on our servers. Displayed only in your browser.</li>
-            <li><strong>Settings:</strong> Stored locally on your device via Chrome Storage API.</li>
+            <li><strong>Selected text:</strong> processed for request/response flow, not stored by us.</li>
+            <li><strong>Explanation output:</strong> displayed in your browser.</li>
+            <li><strong>Settings:</strong> stored in Chrome extension storage until you change/remove them.</li>
         </ul>
 
-        <h2>Your Rights</h2>
-        <p>You have the right to:</p>
+        <h2>Your Control</h2>
         <ul>
-            <li><strong>Access:</strong> View your stored settings in Chrome extension settings</li>
-            <li><strong>Delete:</strong> Remove the extension to delete all local data</li>
-            <li><strong>Opt-out:</strong> Simply don't use the extension</li>
+            <li>Change provider, language, and tone in extension settings.</li>
+            <li>Remove API keys from extension settings at any time.</li>
+            <li>Uninstall the extension to remove local extension data.</li>
         </ul>
-
-        <h2>Children's Privacy</h2>
-        <p>ExplainIt! is suitable for users of all ages. We do not knowingly collect personal information from children. The extension processes text to generate explanations regardless of user age, without collecting any personal data.</p>
 
         <h2>Permissions Explained</h2>
         <table>
             <tr>
                 <th>Permission</th>
-                <th>Why We Need It</th>
-            </tr>
-            <tr>
-                <td><code>activeTab</code></td>
-                <td>To detect text selection on the current page</td>
+                <th>Purpose</th>
             </tr>
             <tr>
                 <td><code>storage</code></td>
-                <td>To save your language and tone preferences</td>
+                <td>Store provider, API keys, and user preferences.</td>
             </tr>
             <tr>
                 <td><code>host_permissions</code></td>
-                <td>To communicate with our backend API</td>
+                <td>Allow requests only to supported AI provider APIs.</td>
             </tr>
         </table>
-        <p>We request only the minimum permissions necessary for the extension to function.</p>
 
-        <h2>Changes to This Policy</h2>
-        <p>We may update this Privacy Policy from time to time. We will notify users of any material changes by updating the "Last Updated" date at the top of this policy.</p>
+        <h2>Policy Updates</h2>
+        <p>
+            We may update this policy when product behavior changes. The date at the top indicates the latest revision.
+        </p>
 
-        <h2>Contact Us</h2>
-        <p>If you have questions about this Privacy Policy, please contact us at:</p>
-        <p><span class="emoji">📧</span> Email: <a href="mailto:dimasta7@gmail.com">dimasta7@gmail.com</a></p>
+        <h2>Contact</h2>
+        <p>
+            Questions: <a href="mailto:dimasta7@gmail.com">dimasta7@gmail.com</a>
+        </p>
 
         <div class="footer">
             <p>© 2026 ExplainIt! All rights reserved.</p>
@@ -213,4 +189,3 @@
     </div>
 </body>
 </html>
-

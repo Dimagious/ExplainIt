@@ -1,213 +1,103 @@
-# 🔍 ExplainIt! - AI-Powered Text Explanation Chrome Extension
+# ExplainIt! - AI-Powered Text Explanation Chrome Extension
 
-> Instant AI explanations for any selected text. One click, instant result!
+Instant AI explanations for any selected text on a webpage.
 
-## 🎯 What is ExplainIt?
+## What ExplainIt Does
 
-ExplainIt! is a Chrome Extension that explains any text you select on a webpage using AI (OpenAI GPT-4o-mini). Simply highlight text, click the icon, and get an instant explanation in your preferred language and complexity level.
+ExplainIt! is a Chrome Extension that explains selected text in your preferred language and tone.
 
-## ✨ Features
+Current version works in **direct provider mode**:
+- OpenAI (GPT-4o mini)
+- Anthropic (Claude Haiku)
+- Google Gemini (Gemini Flash)
+- Groq (Llama 3.3 70B)
 
-### 🚀 One-Click Explanations
-- Select text (3-2000 characters)
-- Click the floating icon
-- Get instant AI-powered explanation in a beautiful popup
+## Key Features
 
-### 🌍 Multi-Language Support
-- **English** 🇬🇧
-- **Russian** 🇷🇺
+- One-click explanation for selected text
+- English and Russian output
+- Three tones: Simple, Like I'm 5, Expert
+- Inline popup UI + toolbar popup
+- Per-provider API keys
+- First-run setup flow for missing API key
+- Copy explanation to clipboard
 
-### 🎯 Three Complexity Levels
-- **Simple Words** - Easy to understand for everyone
-- **Like I'm 5** - Explained as if to a child
-- **Expert Level** - Technical and precise
+## Architecture (Current)
 
-### 💎 Beautiful UX
-- Inline popup (no need to click toolbar!)
-- Loading animation
-- Shadow DOM (no style conflicts)
-- Copy to clipboard
-- Close on ESC or click outside
-- Settings sync across devices
-
-## 🏗️ Architecture
-
-```
-┌─────────────────┐
-│  Content Script │  ← Detects text selection, shows icon
-└────────┬────────┘
-         │
-         ↓
-┌─────────────────┐
-│ Inline Popup    │  ← Beautiful modal on page
-└────────┬────────┘
-         │
-         ↓
-┌─────────────────┐
-│ Background SW   │  ← Routes API calls (CORS bypass)
-└────────┬────────┘
-         │
-         ↓
-┌─────────────────┐
-│  Backend API    │  ← Node.js + Express
-└────────┬────────┘
-         │
-         ↓
-┌─────────────────┐
-│   OpenAI API    │  ← GPT-4o-mini
-└─────────────────┘
+```text
+Page Selection
+   ↓
+Content Script + Inline Popup UI
+   ↓
+Background Service Worker
+   ↓
+Selected AI Provider API (OpenAI / Anthropic / Gemini / Groq)
 ```
 
-## 🚀 Local Development Setup
+No dedicated server is required for extension runtime.
+
+## Local Setup
 
 ### Prerequisites
-- Node.js 18+
-- Chrome Browser
-- OpenAI API Key
 
-### Backend Setup
+- Chrome browser
+- Node.js 18+ (for tests only)
+- API key from at least one supported provider
 
-1. **Navigate to backend folder:**
+### Run Extension Locally
+
+1. Open `chrome://extensions/`
+2. Enable `Developer mode`
+3. Click `Load unpacked`
+4. Select the `extension/` folder
+5. Open extension Settings and add API key for your provider
+
+### Run Tests
+
 ```bash
-cd backend
+cd extension
+npm ci
+npm test
 ```
 
-2. **Install dependencies:**
-```bash
-npm install
-```
+## Storage and Security Model
 
-3. **Create `.env` file:**
-```bash
-cp .env.example .env
-```
+- `chrome.storage.local`:
+  - Selected provider
+  - Provider API keys
+- `chrome.storage.sync`:
+  - Language
+  - Tone
 
-4. **Add your OpenAI API key to `.env`:**
-```env
-OPENAI_API_KEY=sk-proj-your-key-here
-PORT=3000
-NODE_ENV=development
-```
+Security notes:
+- API keys are stored locally on the device (not in sync storage)
+- Selected text is sent only to the provider chosen by the user
+- Output is rendered with safe text handling (`textContent`)
 
-5. **Start the backend:**
-```bash
-npm start
-```
+## Manifest Permissions
 
-Backend will run on `http://localhost:3000`
+`extension/manifest.json` requests:
+- `storage`
+- host permissions only for provider APIs:
+  - `https://api.openai.com/*`
+  - `https://api.anthropic.com/*`
+  - `https://generativelanguage.googleapis.com/*`
+  - `https://api.groq.com/*`
 
-### Extension Setup
+## Repository Structure
 
-1. **Open Chrome and navigate to:**
-```
-chrome://extensions/
-```
+- `extension/` - active product code
+- `extension/tests/` - Jest unit tests for config/background/popup logic
+- `store-assets/` - Chrome Web Store text and images
+- `privacy-policy.html` - public privacy policy page
 
-2. **Enable "Developer mode"** (top right toggle)
+## Privacy
 
-3. **Click "Load unpacked"**
+- No browsing history collection
+- No analytics tracking in extension code
+- Only user-selected text is sent for explanation
+- Full policy: `privacy-policy.html`
 
-4. **Select the `/extension` folder** from this project
+## License
 
-5. **Pin the extension** (click puzzle icon 🧩 in toolbar → pin ExplainIt!)
-
-### Testing
-
-1. Open any webpage
-2. Select some text (at least 3 characters)
-3. Click the blue ExplainIt! icon that appears
-4. See the explanation in the popup!
-
-## 🎨 Tech Stack
-
-### Frontend (Extension)
-- **Vanilla JavaScript** (no frameworks!)
-- **Manifest V3** (latest Chrome Extension API)
-- **Shadow DOM** (style isolation)
-- **Chrome Storage API** (settings sync)
-
-### Backend
-- **Node.js** + **Express**
-- **OpenAI SDK** (gpt-4o-mini)
-- **express-validator** (request validation)
-- **express-rate-limit** (abuse prevention)
-- **CORS** enabled for extensions
-
-## 💰 Cost Estimate
-
-Using **gpt-4o-mini** (cheapest OpenAI model):
-- **Input:** $0.150 / 1M tokens
-- **Output:** $0.600 / 1M tokens
-
-**Average explanation:**
-- ~200 input tokens + ~150 output tokens
-- **Cost per request:** ~$0.0001 (0.01 cent)
-- **$1 = ~8,000 explanations!** 💸
-
-## 🔒 Security
-
-- ✅ API key stored only on backend (never in extension)
-- ✅ HTTPS traffic only
-- ✅ Rate limiting (10 req/min in production)
-- ✅ Request validation
-- ✅ XSS sanitization
-- ✅ Shadow DOM isolation
-
-## 📸 Screenshots
-
-| Select Text | Get Explanation | Settings |
-|-------------|-----------------|----------|
-| ![Selection](store-assets/screenshots/screenshot-1-selection.png) | ![Explanation](store-assets/screenshots/screenshot-2-russian.png) | ![Settings](store-assets/screenshots/screenshot-4-settings.png) |
-
-## 🔐 Privacy
-
-Your privacy matters. We do NOT collect browsing history, personal data, or analytics. Only the text you explicitly select is processed. See our [Privacy Policy](https://dimagious.github.io/ExplainIt/privacy-policy.html).
-
-## 🎯 Roadmap
-
-### v1.0.0 - MVP ✅
-- [x] Text selection and floating icon
-- [x] AI-powered explanations (OpenAI GPT-4o-mini)
-- [x] Multi-language support (EN/RU)
-- [x] Three complexity levels
-- [x] Professional icons (magnifying glass with sparkle)
-- [x] Privacy policy
-- [x] Chrome Web Store submission assets
-
-### v1.1 - Enhanced UX
-- [ ] Better error messages with suggestions
-- [ ] Keyboard shortcuts
-- [ ] More languages
-
-### v2.0 - Monetization
-- [ ] User authentication
-- [ ] Subscription plans
-- [ ] Usage analytics
-
-## 📜 License
-
-MIT License - See LICENSE file for details
-
----
-
-## 🎉 MVP Status: DELIVERED ✅
-
-**Release:** v1.0.0-mvp  
-**Date:** November 25, 2025  
-**Status:** Fully functional, tested, ready for use!
-
-### What Works:
-✅ Text selection detection  
-✅ Floating icon with positioning  
-✅ Inline popup with beautiful UI  
-✅ OpenAI integration (3 tones × 2 languages)  
-✅ Settings persistence  
-✅ Copy to clipboard  
-✅ Error handling  
-✅ Rate limiting  
-✅ CORS bypass via background script  
-
-### User Flow:
-1. 👆 Select text
-2. 🖱️ Click icon  
-3. 🔍 **INSTANT RESULT!**
+MIT
