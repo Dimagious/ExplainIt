@@ -43,6 +43,76 @@ const PROVIDER_META = {
   groq:      { name: 'Groq',      keyUrl: 'https://console.groq.com/keys',               placeholder: 'gsk_...' }
 };
 
+function storageGet(area, keys) {
+  return new Promise((resolve, reject) => {
+    try {
+      if (!area || typeof area.get !== 'function') {
+        resolve({});
+        return;
+      }
+
+      // Callback-style Chrome API
+      if (area.get.length >= 2) {
+        area.get(keys, (result) => {
+          const runtimeError = chrome?.runtime?.lastError;
+          if (runtimeError) {
+            reject(new Error(runtimeError.message));
+            return;
+          }
+          resolve(result || {});
+        });
+        return;
+      }
+
+      // Promise-style API
+      const maybePromise = area.get(keys);
+      if (maybePromise && typeof maybePromise.then === 'function') {
+        maybePromise.then((value) => resolve(value || {})).catch(reject);
+        return;
+      }
+
+      resolve(maybePromise || {});
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+function storageSet(area, data) {
+  return new Promise((resolve, reject) => {
+    try {
+      if (!area || typeof area.set !== 'function') {
+        resolve();
+        return;
+      }
+
+      // Callback-style Chrome API
+      if (area.set.length >= 2) {
+        area.set(data, () => {
+          const runtimeError = chrome?.runtime?.lastError;
+          if (runtimeError) {
+            reject(new Error(runtimeError.message));
+            return;
+          }
+          resolve();
+        });
+        return;
+      }
+
+      // Promise-style API
+      const maybePromise = area.set(data);
+      if (maybePromise && typeof maybePromise.then === 'function') {
+        maybePromise.then(() => resolve()).catch(reject);
+        return;
+      }
+
+      resolve();
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
 function cloneSettings(source = {}) {
   return {
     language: source.language || DEFAULT_SETTINGS.language,
@@ -90,13 +160,13 @@ async function loadSettings() {
 
   // Language + tone are synced across devices (preferences, not secrets)
   try {
-    syncStored = await chrome.storage.sync.get(['language', 'tone']);
+    syncStored = await storageGet(chrome.storage.sync, ['language', 'tone']);
   } catch (error) {
     console.error('[ExplainIt] Error loading sync settings:', error);
 
     // Fallback: read language/tone from local if sync is unavailable
     try {
-      const localSyncFallback = await chrome.storage.local.get(['language', 'tone']);
+      const localSyncFallback = await storageGet(chrome.storage.local, ['language', 'tone']);
       syncStored = {
         language: localSyncFallback.language,
         tone: localSyncFallback.tone
@@ -109,7 +179,7 @@ async function loadSettings() {
 
   // Provider + API keys are local only (security)
   try {
-    localStored = await chrome.storage.local.get(['provider', 'apiKeys']);
+    localStored = await storageGet(chrome.storage.local, ['provider', 'apiKeys']);
   } catch (error) {
     console.error('[ExplainIt] Error loading local settings:', error);
     localStored = {};
@@ -142,10 +212,10 @@ async function saveSettings(newSettings) {
     const { language, tone, provider, apiKeys } = nextSettings;
 
     // Preferences → sync storage (cross-device)
-    await chrome.storage.sync.set({ language, tone });
+    await storageSet(chrome.storage.sync, { language, tone });
 
     // Provider + API keys → local storage only (security)
-    await chrome.storage.local.set({ provider, apiKeys });
+    await storageSet(chrome.storage.local, { provider, apiKeys });
 
     settings = cloneSettings(nextSettings);
     persistedSettings = cloneSettings(nextSettings);
@@ -157,7 +227,7 @@ async function saveSettings(newSettings) {
     // Fallback: save everything to local
     try {
       const { language, tone, provider, apiKeys } = nextSettings;
-      await chrome.storage.local.set({ language, tone, provider, apiKeys });
+      await storageSet(chrome.storage.local, { language, tone, provider, apiKeys });
       settings = cloneSettings(nextSettings);
       persistedSettings = cloneSettings(nextSettings);
       return { success: true, fallback: true };
