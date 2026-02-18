@@ -444,11 +444,10 @@ function removeInlinePopup() {
 }
 
 /**
- * Fetch explanation from backend via background script
- * (Content scripts can't make direct fetch due to CORS)
- * 
- * SECURITY: Validates text before sending
- * ARCHITECTURE: Uses config for validation rules
+ * Fetch explanation via background service worker
+ * (content scripts cannot call provider APIs directly because of CORS/permissions)
+ *
+ * SECURITY: validates text before sending
  */
 async function fetchExplanation(text) {
   try {
@@ -498,16 +497,8 @@ async function fetchExplanation(text) {
     
   } catch (error) {
     console.error('[InlinePopup] Error:', error);
-    
-    // Check if we should suggest mock fallback
-    const shouldUseMock = config && config.FEATURES.FALLBACK_TO_MOCK && 
-                          (error.message.includes('500') || error.message.includes('429'));
-    
-    const errorMsg = shouldUseMock 
-      ? `${error.message} (Server unavailable)`
-      : error.message;
-    
-    showError(errorMsg, text);
+
+    showError(error.message, text);
   }
 }
 
@@ -944,4 +935,3 @@ document.addEventListener('click', (e) => {
     removeSettingsPopup();
   }
 });
-

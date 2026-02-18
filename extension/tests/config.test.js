@@ -4,7 +4,7 @@
  * Real bugs these tests would catch:
  *  - getPrompt doesn't replace {text} → every prompt would contain the literal string
  *  - Wrong language returns wrong-language template (Russian prompt for English user)
- *  - validateText accepts texts over 2000 chars → backend would reject them
+ *  - validateText accepts texts over 2000 chars → request should be rejected
  *  - validateText doesn't strip whitespace → " " passes as valid text
  *  - escapeHtml misses an HTML entity → XSS vulnerability in the UI
  *  - PROVIDERS config points to wrong URL → all calls for that provider fail

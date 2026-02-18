@@ -1,63 +1,53 @@
-🔍 ExplainIt! — AI-Powered Text Explanations
+🔍 ExplainIt! — Instant AI Explanations for Any Selected Text
 
-Struggling to understand complex text? ExplainIt! makes it simple. Select any text on any webpage, click the icon, and get an instant AI-powered explanation.
+ExplainIt! helps you understand complex text on any webpage. Select text, click the icon, and get a clear explanation in seconds.
 
 ✨ KEY FEATURES
 
 🚀 One-Click Explanations
-• Select text (3-2000 characters)
-• Click the floating icon that appears
-• Get instant explanation in a beautiful popup
+• Select text on any page
+• Click the floating ExplainIt icon
+• Get an explanation instantly
 
-🎯 Three Complexity Levels
-• Simple Words — Easy to understand for everyone
-• Like I'm 5 — Explained as if to a child  
-• Expert Level — Technical and precise details
+🤖 Multi-Provider AI Support
+• OpenAI (GPT-4o mini)
+• Anthropic (Claude Haiku)
+• Google Gemini (Gemini Flash)
+• Groq (Llama 3.3 70B)
 
-🌍 Multi-Language Support
-• English — Native explanations
-• Russian — Полная поддержка русского языка
+🔑 Bring Your Own API Key
+• Choose your preferred provider
+• Add your own API key in settings
+• API keys are stored locally in your browser extension storage
 
-💎 Beautiful User Experience
-• Inline popup appears right where you selected text
-• No toolbar clicking needed
-• Copy explanation to clipboard with one click
-• Close with ESC or click outside
-• Settings sync across all your devices
+🎯 Flexible Explanation Style
+• Simple Words
+• Like I'm 5
+• Expert Level
 
-🔍 HOW IT WORKS
+🌍 Language Support
+• English
+• Russian
 
-1️⃣ Select any text on a webpage
-2️⃣ Click the ExplainIt! icon that appears
-3️⃣ Get your explanation instantly!
+💎 Practical UX
+• Inline popup near selected text
+• Retry and copy-to-clipboard actions
+• Fast settings access
 
-🎓 PERFECT FOR
+🔒 PRIVACY NOTES
 
-• Students learning new subjects
-• Non-native speakers reading foreign content
-• Professionals exploring unfamiliar topics
-• Anyone who wants to understand complex text quickly
-• Parents explaining things to kids
-• Researchers diving into new fields
+• Only text you explicitly select is processed
+• No browsing history collection
+• No analytics tracking in extension code
+• Selected text is sent only to your chosen AI provider
 
-🔒 PRIVACY & SECURITY
+🎓 GREAT FOR
 
-• Your selected text is processed securely
-• No personal data is stored
-• No browsing history is collected
-• API key stored securely on backend only
-• Full privacy policy available
-
-🤖 POWERED BY AI
-
-ExplainIt! uses advanced AI (GPT-4o-mini) to generate accurate, contextual explanations. The AI adapts its response based on your chosen complexity level and language.
-
-💡 TIPS
-
-• Works on any webpage with selectable text
-• Select 3-2000 characters for best results
-• Try different complexity levels for the same text
-• Use keyboard shortcut ESC to close popup quickly
+• Students
+• Non-native readers
+• Professionals learning unfamiliar topics
+• Anyone who wants faster comprehension
 
 ---
 
+Select text. Click once. Understand faster.

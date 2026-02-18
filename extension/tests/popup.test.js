@@ -42,6 +42,7 @@ mockSendMsg.mockResolvedValue({ success: false, error: 'No text stored' });
 
 document.body.innerHTML = `
   <div id="result-screen"  class="screen active" style="display:flex; flex-direction:column">
+    <button id="settings-btn"></button>
     <div id="loading-state" class="content-section hidden"></div>
     <div id="result-state"  class="content-section hidden">
       <p  id="original-text-content"></p>
@@ -58,6 +59,7 @@ document.body.innerHTML = `
     <p   id="timeout-warning" class="hidden"></p>
   </div>
   <div id="settings-screen" class="screen" style="display:none; flex-direction:column">
+    <button id="back-btn" type="button"></button>
     <div id="welcome-notice" class="hidden"></div>
     <form id="settings-form">
       <input type="radio" name="provider" value="openai" />
@@ -87,7 +89,8 @@ const {
   validateSettings,
   saveSettings,
   loadSettings,
-  onProviderSwitch
+  onProviderSwitch,
+  fetchExplanation
 } = require('../popup.js');
 
 // Allow init() async chain to settle before any test runs
@@ -277,45 +280,51 @@ describe('onProviderSwitch: preserves API keys across provider switches', () => 
 
     expect(input.value).toBe('sk-new-openai-key');
   });
+
+  test('back button discards unsaved provider switch', () => {
+    const input = document.getElementById('api-key-input');
+    const anthropicRadio = document.querySelector('input[name="provider"][value="anthropic"]');
+    const backBtn = document.getElementById('back-btn');
+
+    anthropicRadio.checked = true;
+    anthropicRadio.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(input.value).toBe('sk-ant-saved');
+
+    backBtn.click();
+
+    const checked = document.querySelector('input[name="provider"]:checked');
+    expect(checked?.value).toBe('openai');
+    expect(input.value).toBe('sk-saved-openai');
+  });
 });
 
-// ─── "No API key" error detection ─────────────────────────────────────────────
+// ─── fetchExplanation: real error UX path ─────────────────────────────────────
 
-describe('Error detection: "no API key" vs retriable errors', () => {
-  // Helper: checks what happens in the error state given a background.js error message
-  function getErrorStateAfterError(errorMessage, originalText = 'test') {
-    // Simulate showErrorState directly by checking the logic
-    const isNoKeyError =
-      errorMessage.toLowerCase().includes('no api key') ||
-      errorMessage.toLowerCase().includes('api key');
-    return { isNoKeyError };
-  }
+describe('fetchExplanation: API key errors vs retryable errors', () => {
+  test('shows "Open Settings" for missing API key errors', async () => {
+    mockSendMsg.mockResolvedValueOnce({
+      success: false,
+      error: 'No API key configured. Open Settings and add your API key.'
+    });
 
-  test('detects "No API key configured" message', () => {
-    const { isNoKeyError } = getErrorStateAfterError(
-      'No API key configured. Open Settings and add your API key.'
-    );
-    expect(isNoKeyError).toBe(true);
+    await fetchExplanation('test text');
+
+    expect(document.getElementById('retry-btn').classList.contains('hidden')).toBe(true);
+    expect(document.getElementById('error-settings-btn').classList.contains('hidden')).toBe(false);
+    expect(document.getElementById('error-message').textContent).toContain('No API key configured');
   });
 
-  test('detects "api key" case-insensitively', () => {
-    const { isNoKeyError } = getErrorStateAfterError('API Key missing');
-    expect(isNoKeyError).toBe(true);
-  });
+  test('shows Retry for non-key errors', async () => {
+    mockSendMsg.mockResolvedValueOnce({
+      success: false,
+      error: 'Internal Server Error'
+    });
 
-  test('does not flag a network error as "no API key"', () => {
-    const { isNoKeyError } = getErrorStateAfterError('Request timed out');
-    expect(isNoKeyError).toBe(false);
-  });
+    await fetchExplanation('test text');
 
-  test('does not flag a 500 server error as "no API key"', () => {
-    const { isNoKeyError } = getErrorStateAfterError('Internal Server Error');
-    expect(isNoKeyError).toBe(false);
-  });
-
-  test('does not flag a rate limit error as "no API key"', () => {
-    const { isNoKeyError } = getErrorStateAfterError('Rate limit exceeded');
-    expect(isNoKeyError).toBe(false);
+    expect(document.getElementById('retry-btn').classList.contains('hidden')).toBe(false);
+    expect(document.getElementById('error-settings-btn').classList.contains('hidden')).toBe(true);
+    expect(document.getElementById('error-message').textContent).toContain('Internal Server Error');
   });
 });
 
@@ -343,5 +352,37 @@ describe('loadSettings: default values when storage is empty', () => {
     await loadSettings();
     const radio = document.querySelector('input[name="provider"]:checked');
     expect(radio?.value).toBe('openai');
+  });
+});
+
+describe('loadSettings: fallback behavior when sync is unavailable', () => {
+  test('loads language and tone from local fallback when sync.get fails', async () => {
+    mockSyncGet.mockRejectedValue(new Error('Sync unavailable'));
+    mockLocalGet.mockImplementation((keys) => {
+      if (Array.isArray(keys) && keys.includes('provider')) {
+        return Promise.resolve({
+          provider: 'groq',
+          apiKeys: { groq: 'gsk-local' }
+        });
+      }
+
+      if (Array.isArray(keys) && keys.includes('language')) {
+        return Promise.resolve({
+          language: 'ru',
+          tone: 'expert'
+        });
+      }
+
+      return Promise.resolve({});
+    });
+
+    await loadSettings();
+
+    expect(document.getElementById('language-select').value).toBe('ru');
+    expect(document.getElementById('tone-select').value).toBe('expert');
+
+    const checked = document.querySelector('input[name="provider"]:checked');
+    expect(checked?.value).toBe('groq');
+    expect(document.getElementById('api-key-input').value).toBe('gsk-local');
   });
 });

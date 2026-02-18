@@ -9,12 +9,23 @@
 let currentScreen = 'result';
 let currentState = 'empty';
 
-// Runtime settings (loaded from storage on init)
-let settings = {
+const DEFAULT_SETTINGS = {
   language: 'en',
   tone: 'simple',
   provider: 'openai',
   apiKeys: {}   // { openai: '...', anthropic: '...', gemini: '...', groq: '...' }
+};
+
+// Runtime settings (mutable, can include unsaved edits in Settings screen)
+let settings = {
+  ...DEFAULT_SETTINGS,
+  apiKeys: {}
+};
+
+// Last successfully loaded/saved settings
+let persistedSettings = {
+  ...DEFAULT_SETTINGS,
+  apiKeys: {}
 };
 
 // Tracks API key edits per provider during a settings session (unsaved)
@@ -31,6 +42,15 @@ const PROVIDER_META = {
   gemini:    { name: 'Google',    keyUrl: 'https://aistudio.google.com/app/apikey',       placeholder: 'AIza...' },
   groq:      { name: 'Groq',      keyUrl: 'https://console.groq.com/keys',               placeholder: 'gsk_...' }
 };
+
+function cloneSettings(source = {}) {
+  return {
+    language: source.language || DEFAULT_SETTINGS.language,
+    tone: source.tone || DEFAULT_SETTINGS.tone,
+    provider: source.provider || DEFAULT_SETTINGS.provider,
+    apiKeys: { ...(source.apiKeys || {}) }
+  };
+}
 
 // ─── Screen / state switching ─────────────────────────────────────────────────
 
@@ -65,26 +85,48 @@ function showState(stateId) {
 // ─── Settings: load ───────────────────────────────────────────────────────────
 
 async function loadSettings() {
+  let syncStored = {};
+  let localStored = {};
+
+  // Language + tone are synced across devices (preferences, not secrets)
   try {
-    // Language + tone are synced across devices (preferences, not secrets)
-    const [syncStored, localStored] = await Promise.all([
-      chrome.storage.sync.get(['language', 'tone']),
-      chrome.storage.local.get(['provider', 'apiKeys'])
-    ]);
-
-    settings = {
-      language: syncStored.language || 'en',
-      tone:     syncStored.tone     || 'simple',
-      provider: localStored.provider || 'openai',
-      apiKeys:  localStored.apiKeys  || {}
-    };
-
-    console.log('[ExplainIt] Settings loaded:', { ...settings, apiKeys: '[redacted]' });
-    updateSettingsUI();
+    syncStored = await chrome.storage.sync.get(['language', 'tone']);
   } catch (error) {
-    console.error('[ExplainIt] Error loading settings:', error);
-    settings = { language: 'en', tone: 'simple', provider: 'openai', apiKeys: {} };
+    console.error('[ExplainIt] Error loading sync settings:', error);
+
+    // Fallback: read language/tone from local if sync is unavailable
+    try {
+      const localSyncFallback = await chrome.storage.local.get(['language', 'tone']);
+      syncStored = {
+        language: localSyncFallback.language,
+        tone: localSyncFallback.tone
+      };
+    } catch (fallbackError) {
+      console.error('[ExplainIt] Error loading local fallback for sync settings:', fallbackError);
+      syncStored = {};
+    }
   }
+
+  // Provider + API keys are local only (security)
+  try {
+    localStored = await chrome.storage.local.get(['provider', 'apiKeys']);
+  } catch (error) {
+    console.error('[ExplainIt] Error loading local settings:', error);
+    localStored = {};
+  }
+
+  const loaded = cloneSettings({
+    language: syncStored.language || localStored.language || DEFAULT_SETTINGS.language,
+    tone: syncStored.tone || localStored.tone || DEFAULT_SETTINGS.tone,
+    provider: localStored.provider || DEFAULT_SETTINGS.provider,
+    apiKeys: localStored.apiKeys || {}
+  });
+
+  settings = cloneSettings(loaded);
+  persistedSettings = cloneSettings(loaded);
+
+  console.log('[ExplainIt] Settings loaded:', { ...settings, apiKeys: '[redacted]' });
+  updateSettingsUI();
 }
 
 // ─── Settings: save ───────────────────────────────────────────────────────────
@@ -94,8 +136,10 @@ async function saveSettings(newSettings) {
     return { success: false, error: 'Invalid settings values' };
   }
 
+  const nextSettings = cloneSettings({ ...settings, ...newSettings });
+
   try {
-    const { language, tone, provider, apiKeys } = newSettings;
+    const { language, tone, provider, apiKeys } = nextSettings;
 
     // Preferences → sync storage (cross-device)
     await chrome.storage.sync.set({ language, tone });
@@ -103,7 +147,8 @@ async function saveSettings(newSettings) {
     // Provider + API keys → local storage only (security)
     await chrome.storage.local.set({ provider, apiKeys });
 
-    settings = { ...settings, ...newSettings };
+    settings = cloneSettings(nextSettings);
+    persistedSettings = cloneSettings(nextSettings);
     console.log('[ExplainIt] Settings saved');
     return { success: true };
   } catch (error) {
@@ -111,9 +156,10 @@ async function saveSettings(newSettings) {
 
     // Fallback: save everything to local
     try {
-      const { language, tone, provider, apiKeys } = newSettings;
+      const { language, tone, provider, apiKeys } = nextSettings;
       await chrome.storage.local.set({ language, tone, provider, apiKeys });
-      settings = { ...settings, ...newSettings };
+      settings = cloneSettings(nextSettings);
+      persistedSettings = cloneSettings(nextSettings);
       return { success: true, fallback: true };
     } catch (localError) {
       console.error('[ExplainIt] Local storage fallback failed:', localError);
@@ -240,6 +286,7 @@ function setupEventListeners() {
   const settingsBtn = document.getElementById('settings-btn');
   if (settingsBtn) {
     settingsBtn.addEventListener('click', () => {
+      settings = cloneSettings(persistedSettings);
       draftApiKeys = {}; // Reset draft on each open
       updateSettingsUI();
       document.getElementById('welcome-notice')?.classList.add('hidden');
@@ -251,8 +298,8 @@ function setupEventListeners() {
   const backBtn = document.getElementById('back-btn');
   if (backBtn) {
     backBtn.addEventListener('click', () => {
+      settings = cloneSettings(persistedSettings);
       draftApiKeys = {};
-      settings.provider = document.querySelector('input[name="provider"]:checked')?.value || settings.provider;
       // Reload UI with saved values
       updateSettingsUI();
       showScreen('result');
