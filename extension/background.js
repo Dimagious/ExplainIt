@@ -88,7 +88,10 @@ async function fetchWithTimeout(url, options = {}) {
 /**
  * OpenAI-compatible call (used by OpenAI and Groq)
  */
-async function callOpenAICompatible(url, apiKey, model, prompt) {
+async function callOpenAICompatible(url, apiKey, model, prompt, requestOptions = {}) {
+  const maxTokens = requestOptions.maxTokens ?? 500;
+  const temperature = requestOptions.temperature ?? 0.7;
+
   const response = await fetchWithTimeout(url, {
     method: 'POST',
     headers: {
@@ -98,8 +101,8 @@ async function callOpenAICompatible(url, apiKey, model, prompt) {
     body: JSON.stringify({
       model,
       messages: [{ role: 'user', content: prompt }],
-      max_tokens: 500,
-      temperature: 0.7
+      max_tokens: maxTokens,
+      temperature
     })
   });
 
@@ -119,7 +122,9 @@ async function callOpenAICompatible(url, apiKey, model, prompt) {
 /**
  * Anthropic Messages API
  */
-async function callAnthropic(apiKey, model, prompt) {
+async function callAnthropic(apiKey, model, prompt, requestOptions = {}) {
+  const maxTokens = requestOptions.maxTokens ?? 500;
+
   const response = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -129,7 +134,7 @@ async function callAnthropic(apiKey, model, prompt) {
     },
     body: JSON.stringify({
       model,
-      max_tokens: 500,
+      max_tokens: maxTokens,
       messages: [{ role: 'user', content: prompt }]
     })
   });
@@ -150,7 +155,9 @@ async function callAnthropic(apiKey, model, prompt) {
 /**
  * Google Gemini API
  */
-async function callGemini(apiKey, model, prompt) {
+async function callGemini(apiKey, model, prompt, requestOptions = {}) {
+  const maxTokens = requestOptions.maxTokens ?? 500;
+  const temperature = requestOptions.temperature ?? 0.7;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const response = await fetchWithTimeout(url, {
@@ -158,7 +165,7 @@ async function callGemini(apiKey, model, prompt) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { maxOutputTokens: 500, temperature: 0.7 }
+      generationConfig: { maxOutputTokens: maxTokens, temperature }
     })
   });
 
@@ -178,17 +185,39 @@ async function callGemini(apiKey, model, prompt) {
 /**
  * Dispatch to the correct provider caller
  */
-async function callProvider(providerId, apiKey, text, tone, language) {
+async function callProvider(providerId, apiKey, text, tone, language, requestOptions = {}) {
   const providerCfg = PROVIDER_CONFIGS[providerId] || PROVIDER_CONFIGS.openai;
   const prompt = buildPrompt(text, tone, language);
 
   switch (providerCfg.type) {
     case 'anthropic':
-      return callAnthropic(apiKey, providerCfg.model, prompt);
+      return callAnthropic(apiKey, providerCfg.model, prompt, requestOptions);
     case 'gemini':
-      return callGemini(apiKey, providerCfg.model, prompt);
+      return callGemini(apiKey, providerCfg.model, prompt, requestOptions);
     default: // 'openai' — also handles groq
-      return callOpenAICompatible(providerCfg.url, apiKey, providerCfg.model, prompt);
+      return callOpenAICompatible(providerCfg.url, apiKey, providerCfg.model, prompt, requestOptions);
+  }
+}
+
+async function validateApiKey(providerId, apiKey) {
+  if (!apiKey) {
+    throw new Error('API key is required');
+  }
+
+  const providerCfg = PROVIDER_CONFIGS[providerId] || PROVIDER_CONFIGS.openai;
+  const pingPrompt = 'Respond with exactly: OK';
+  const requestOptions = { maxTokens: 24, temperature: 0 };
+
+  switch (providerCfg.type) {
+    case 'anthropic':
+      await callAnthropic(apiKey, providerCfg.model, pingPrompt, requestOptions);
+      return { success: true };
+    case 'gemini':
+      await callGemini(apiKey, providerCfg.model, pingPrompt, requestOptions);
+      return { success: true };
+    default:
+      await callOpenAICompatible(providerCfg.url, apiKey, providerCfg.model, pingPrompt, requestOptions);
+      return { success: true };
   }
 }
 
@@ -280,6 +309,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Keep channel open for async response
   }
 
+  if (message.type === 'VALIDATE_API_KEY') {
+    const providerId = message.provider || 'openai';
+    const apiKey = (message.apiKey || '').trim();
+
+    if (!apiKey) {
+      sendResponse({ success: false, error: 'API key is required' });
+      return true;
+    }
+
+    validateApiKey(providerId, apiKey)
+      .then(() => sendResponse({ success: true }))
+      .catch((error) => sendResponse({ success: false, error: error.message || 'Validation failed' }));
+
+    return true;
+  }
+
   // Return stored text to popup
   if (message.type === 'GET_SELECTED_TEXT') {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -330,6 +375,7 @@ if (typeof module !== 'undefined' && module.exports) {
     callGemini,
     callProvider,
     fetchExplanationWithResilience,
+    validateApiKey,
     PROVIDER_CONFIGS,
     PROMPTS
   };

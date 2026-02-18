@@ -30,6 +30,8 @@ let persistedSettings = {
 
 // Tracks API key edits per provider during a settings session (unsaved)
 let draftApiKeys = {};
+let keyStatusByProvider = {};
+let keyStatusMessageByProvider = {};
 
 let loadingTimeoutId = null;
 let abortController = null;
@@ -41,6 +43,14 @@ const PROVIDER_META = {
   anthropic: { name: 'Anthropic', keyUrl: 'https://console.anthropic.com/settings/keys', placeholder: 'sk-ant-...' },
   gemini:    { name: 'Google',    keyUrl: 'https://aistudio.google.com/app/apikey',       placeholder: 'AIza...' },
   groq:      { name: 'Groq',      keyUrl: 'https://console.groq.com/keys',               placeholder: 'gsk_...' }
+};
+
+const KEY_STATUS_LABELS = {
+  'not-set': 'Not set',
+  saved: 'Saved',
+  testing: 'Testing...',
+  validated: 'Validated',
+  invalid: 'Invalid'
 };
 
 function storageGet(area, keys) {
@@ -135,6 +145,12 @@ function showScreen(screenId) {
     target.classList.add('active');
     target.style.display = 'flex';
     currentScreen = screenId;
+
+    if (screenId === 'settings') {
+      document.getElementById('back-btn')?.focus();
+    } else if (screenId === 'result') {
+      document.getElementById('settings-btn')?.focus();
+    }
   }
 }
 
@@ -194,6 +210,7 @@ async function loadSettings() {
 
   settings = cloneSettings(loaded);
   persistedSettings = cloneSettings(loaded);
+  initializeKeyStatuses();
 
   console.log('[ExplainIt] Settings loaded:', { ...settings, apiKeys: '[redacted]' });
   updateSettingsUI();
@@ -253,6 +270,96 @@ function validateSettings(s) {
   return true;
 }
 
+function inferKeyStatusFromValue(value) {
+  return value && value.trim().length > 0 ? 'saved' : 'not-set';
+}
+
+function initializeKeyStatuses() {
+  keyStatusByProvider = {};
+  keyStatusMessageByProvider = {};
+
+  Object.keys(PROVIDER_META).forEach((providerId) => {
+    const keyValue = settings.apiKeys?.[providerId] || '';
+    keyStatusByProvider[providerId] = inferKeyStatusFromValue(keyValue);
+    keyStatusMessageByProvider[providerId] = '';
+  });
+}
+
+function updateKeyStatusUI(providerId = settings.provider) {
+  const statusEl = document.getElementById('api-key-status');
+  if (!statusEl) return;
+
+  const status = keyStatusByProvider[providerId] || 'not-set';
+  const message = keyStatusMessageByProvider[providerId] || '';
+  const label = KEY_STATUS_LABELS[status] || KEY_STATUS_LABELS['not-set'];
+
+  statusEl.textContent = message ? `${label}: ${message}` : label;
+  statusEl.className = `key-status ${status}`;
+}
+
+function setKeyStatus(providerId, status, message = '') {
+  keyStatusByProvider[providerId] = status;
+  keyStatusMessageByProvider[providerId] = message;
+
+  if (providerId === settings.provider) {
+    updateKeyStatusUI(providerId);
+  }
+}
+
+function updateProviderCardAria() {
+  document.querySelectorAll('.provider-card').forEach((card) => {
+    card.setAttribute('role', 'radio');
+    const input = card.querySelector('input[name="provider"]');
+    card.setAttribute('aria-checked', input?.checked ? 'true' : 'false');
+  });
+}
+
+function isKeyRelatedErrorMessage(message = '') {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('no api key') ||
+    normalized.includes('api key') ||
+    normalized.includes('incorrect api key') ||
+    normalized.includes('unauthorized') ||
+    normalized.includes('401')
+  );
+}
+
+function mapUserFacingError(message = '', keyRelatedHint = false) {
+  const normalized = message.toLowerCase();
+
+  if (isKeyRelatedErrorMessage(message) || keyRelatedHint) {
+    return {
+      message: 'API key issue detected.\nOpen Settings, verify provider/key, then click "Test key".',
+      isKeyRelated: true
+    };
+  }
+
+  if (normalized.includes('rate limit') || normalized.includes('429')) {
+    return {
+      message: 'Provider rate limit reached.\nWait a bit and retry, or switch to another provider.',
+      isKeyRelated: false
+    };
+  }
+
+  if (
+    normalized.includes('timed out') ||
+    normalized.includes('timeout') ||
+    normalized.includes('network') ||
+    normalized.includes('fetch')
+  ) {
+    return {
+      message: 'Network/provider timeout.\nCheck connection and retry in a few seconds.',
+      isKeyRelated: false
+    };
+  }
+
+  return {
+    message: message || 'Failed to generate explanation. Please try again.',
+    isKeyRelated: false
+  };
+}
+
 // ─── Settings UI ──────────────────────────────────────────────────────────────
 
 function updateSettingsUI() {
@@ -265,6 +372,7 @@ function updateSettingsUI() {
   // Provider radio
   const radio = document.querySelector(`input[name="provider"][value="${settings.provider}"]`);
   if (radio) radio.checked = true;
+  updateProviderCardAria();
 
   // Reset draft keys to saved values at session start
   draftApiKeys = {};
@@ -280,18 +388,32 @@ function updateApiKeyField(providerId) {
   const meta = PROVIDER_META[providerId] || PROVIDER_META.openai;
   const keyInput = document.getElementById('api-key-input');
   const keyLink  = document.getElementById('get-key-link');
+  const testKeyBtn = document.getElementById('test-key-btn');
 
+  let keyValue = '';
   if (keyInput) {
     keyInput.placeholder = meta.placeholder;
     // Show saved or draft key (draft takes precedence)
-    keyInput.value = draftApiKeys[providerId] !== undefined
+    keyValue = draftApiKeys[providerId] !== undefined
       ? draftApiKeys[providerId]
       : (settings.apiKeys[providerId] || '');
+    keyInput.value = keyValue;
   }
 
   if (keyLink) {
     keyLink.href = meta.keyUrl;
     keyLink.textContent = `Get ${meta.name} API key →`;
+  }
+
+  if (!keyStatusByProvider[providerId]) {
+    keyStatusByProvider[providerId] = inferKeyStatusFromValue(keyValue);
+    keyStatusMessageByProvider[providerId] = '';
+  }
+
+  updateKeyStatusUI(providerId);
+
+  if (testKeyBtn) {
+    testKeyBtn.disabled = !keyValue.trim();
   }
 }
 
@@ -312,6 +434,25 @@ function onProviderSwitch(newProviderId) {
 
   // Load key for the newly selected provider
   updateApiKeyField(newProviderId);
+  updateProviderCardAria();
+}
+
+async function validateProviderKey(providerId, apiKey) {
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: 'VALIDATE_API_KEY',
+      provider: providerId,
+      apiKey
+    });
+
+    if (!response?.success) {
+      return { success: false, error: response?.error || 'Provider rejected API key' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message || 'Validation request failed' };
+  }
 }
 
 // ─── Save confirmation ────────────────────────────────────────────────────────
@@ -383,14 +524,65 @@ function setupEventListeners() {
     });
   });
 
+  document.querySelectorAll('.provider-card').forEach((card) => {
+    card.tabIndex = 0;
+    card.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      const radio = card.querySelector('input[name="provider"]');
+      if (!radio) return;
+      radio.checked = true;
+      radio.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  });
+
   // Show / hide API key toggle
   const toggleKeyBtn = document.getElementById('toggle-key-btn');
   const apiKeyInput  = document.getElementById('api-key-input');
+  const testKeyBtn = document.getElementById('test-key-btn');
   if (toggleKeyBtn && apiKeyInput) {
     toggleKeyBtn.addEventListener('click', () => {
       const isHidden = apiKeyInput.type === 'password';
       apiKeyInput.type = isHidden ? 'text' : 'password';
       toggleKeyBtn.title = isHidden ? 'Hide key' : 'Show key';
+    });
+
+    apiKeyInput.addEventListener('input', () => {
+      const provider = settings.provider;
+      const keyValue = apiKeyInput.value.trim();
+      draftApiKeys[provider] = keyValue;
+      setKeyStatus(provider, inferKeyStatusFromValue(keyValue));
+      if (testKeyBtn) {
+        testKeyBtn.disabled = !keyValue;
+      }
+    });
+  }
+
+  if (testKeyBtn) {
+    testKeyBtn.addEventListener('click', async () => {
+      const provider = settings.provider;
+      const keyValue = apiKeyInput?.value?.trim() || '';
+
+      if (!keyValue) {
+        setKeyStatus(provider, 'not-set');
+        return;
+      }
+
+      setKeyStatus(provider, 'testing');
+      testKeyBtn.disabled = true;
+      testKeyBtn.textContent = 'Testing...';
+
+      const result = await validateProviderKey(provider, keyValue);
+
+      testKeyBtn.disabled = false;
+      testKeyBtn.textContent = 'Test key';
+
+      if (result.success) {
+        setKeyStatus(provider, 'validated');
+      } else {
+        const shortError = (result.error || 'Invalid key').slice(0, 60);
+        setKeyStatus(provider, 'invalid', shortError);
+      }
     });
   }
 
@@ -420,6 +612,7 @@ function setupEventListeners() {
       saveBtn.textContent = 'Save Settings';
 
       if (result.success) {
+        setKeyStatus(provider, inferKeyStatusFromValue(currentKey));
         showSaveConfirmation(result.fallback ? 'saved-local' : 'saved');
         draftApiKeys = {};
         setTimeout(() => showScreen('result'), 1500);
@@ -581,9 +774,8 @@ async function fetchExplanation(text) {
     clearTimeout(timeoutId);
 
     if (!response?.success) {
-      const isNoKeyError = response?.error?.toLowerCase().includes('no api key') ||
-                           response?.error?.toLowerCase().includes('api key');
-      throw Object.assign(new Error(response?.error || 'Failed to fetch explanation'), { isNoKeyError });
+      const rawError = response?.error || 'Failed to fetch explanation';
+      throw Object.assign(new Error(rawError), { isNoKeyError: isKeyRelatedErrorMessage(rawError) });
     }
 
     hideLoadingState();
@@ -599,7 +791,8 @@ async function fetchExplanation(text) {
     }
 
     console.error('[ExplainIt] Error fetching explanation:', error);
-    showErrorState(error.message, text, error.isNoKeyError);
+    const mapped = mapUserFacingError(error.message, error.isNoKeyError);
+    showErrorState(mapped.message, text, mapped.isKeyRelated);
   } finally {
     abortController = null;
   }

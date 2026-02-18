@@ -65,7 +65,7 @@ function validateText(text) {
 const ICON_SVG = `
 <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
   <!-- Background circle -->
-  <circle cx="16" cy="16" r="15" fill="#4A90E2" stroke="white" stroke-width="2"/>
+  <circle cx="16" cy="16" r="15" fill="#2563EB" stroke="white" stroke-width="2"/>
   <!-- Magnifying glass -->
   <circle cx="13" cy="13" r="6" stroke="white" stroke-width="2.5" fill="none"/>
   <line x1="17.5" y1="17.5" x2="23" y2="23" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
@@ -118,12 +118,17 @@ const ICON_STYLES = `
   .explainit-icon:active {
     transform: scale(0.95);
   }
+
+  .explainit-icon:focus-visible {
+    outline: 2px solid #2563EB;
+    outline-offset: 2px;
+  }
   
   .settings-gear {
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: #4A90E2;
+    background: #2563EB;
     color: white;
     display: none;
     align-items: center;
@@ -131,9 +136,14 @@ const ICON_STYLES = `
     cursor: pointer;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
     transition: all 0.2s ease;
-    font-size: 14px;
     opacity: 0;
     transform: translateX(-8px);
+  }
+
+  .settings-gear svg {
+    width: 14px;
+    height: 14px;
+    display: block;
   }
   
   .icon-wrapper:hover .settings-gear {
@@ -143,8 +153,13 @@ const ICON_STYLES = `
   }
   
   .settings-gear:hover {
-    background: #357ABD;
+    background: #1D4ED8;
     transform: translateX(0) scale(1.1);
+  }
+
+  .settings-gear:focus-visible {
+    outline: 2px solid #2563EB;
+    outline-offset: 2px;
   }
   
   .tooltip {
@@ -177,6 +192,13 @@ const ICON_STYLES = `
   
   .icon-wrapper:hover .tooltip {
     opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      transition: none !important;
+      animation: none !important;
+    }
   }
 `;
 
@@ -217,6 +239,9 @@ function createFloatingIcon() {
   icon.className = 'explainit-icon';
   icon.innerHTML = ICON_SVG;
   icon.setAttribute('title', 'Explain selected text');
+  icon.setAttribute('role', 'button');
+  icon.setAttribute('tabindex', '0');
+  icon.setAttribute('aria-label', 'Explain selected text');
   
   // Create tooltip
   const tooltip = document.createElement('div');
@@ -226,11 +251,23 @@ function createFloatingIcon() {
   // Create settings gear
   const settingsGear = document.createElement('div');
   settingsGear.className = 'settings-gear';
-  settingsGear.innerHTML = '⚙️';
+  settingsGear.innerHTML = `
+    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <path d="M17.43 10.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C12.46 2.18 12.25 2 12 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM10 13c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/>
+    </svg>
+  `;
   settingsGear.setAttribute('title', 'Open settings');
+  settingsGear.setAttribute('role', 'button');
+  settingsGear.setAttribute('tabindex', '0');
+  settingsGear.setAttribute('aria-label', 'Open settings');
   
   // Add click handler to main icon
   icon.addEventListener('click', handleIconClick);
+  icon.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    handleIconClick(event);
+  });
   
   // Add click handler to settings gear
   settingsGear.addEventListener('click', (e) => {
@@ -238,12 +275,17 @@ function createFloatingIcon() {
     e.preventDefault();
     // Hide floating icon
     removeFloatingIcon();
-    // Show settings popup (same mechanism as inline popup)
-    if (typeof createSettingsPopup === 'function') {
-      createSettingsPopup();
+    // Open unified inline settings flow (provider + key + language + tone)
+    if (typeof createInlinePopup === 'function') {
+      createInlinePopup(selectedText, { openSettings: true, skipImmediateFetch: true });
     } else {
-      console.error('[ExplainIt] createSettingsPopup not available!');
+      console.error('[ExplainIt] inline-popup.js not loaded!');
     }
+  });
+  settingsGear.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    settingsGear.click();
   });
   
   // Assemble structure
