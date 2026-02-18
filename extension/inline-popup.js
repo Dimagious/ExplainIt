@@ -239,7 +239,7 @@ function createInlinePopup(selectedText, options = {}) {
     
     .header {
       padding: 16px 20px;
-      background: #4A90E2;
+      background: #2563EB;
       color: white;
       display: flex;
       justify-content: space-between;
@@ -247,8 +247,25 @@ function createInlinePopup(selectedText, options = {}) {
     }
     
     .title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       font-size: 18px;
       font-weight: 600;
+    }
+
+    .title-icon {
+      width: 22px;
+      height: 22px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    .title-icon svg {
+      display: block;
     }
     
     .close-btn {
@@ -275,9 +292,13 @@ function createInlinePopup(selectedText, options = {}) {
       background: none;
       border: none;
       color: white;
-      font-size: 18px;
       cursor: pointer;
-      padding: 4px 8px;
+      width: 30px;
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
       border-radius: 4px;
       transition: background 0.2s;
       margin-right: 8px;
@@ -325,7 +346,7 @@ function createInlinePopup(selectedText, options = {}) {
     .form-select {
       width: 100%;
       padding: 10px 14px;
-      border: 2px solid #e1e8ed;
+      border: 2px solid #cbd5e1;
       border-radius: 8px;
       font-size: 14px;
       background: white;
@@ -336,12 +357,12 @@ function createInlinePopup(selectedText, options = {}) {
     }
     
     .form-select:hover {
-      border-color: #4A90E2;
+      border-color: #2563EB;
     }
     
     .form-select:focus {
       outline: none;
-      border-color: #4A90E2;
+      border-color: #2563EB;
       box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
     }
 
@@ -354,7 +375,7 @@ function createInlinePopup(selectedText, options = {}) {
     .form-input {
       width: 100%;
       padding: 10px 42px 10px 14px;
-      border: 2px solid #e1e8ed;
+      border: 2px solid #cbd5e1;
       border-radius: 8px;
       font-size: 14px;
       color: #333;
@@ -363,12 +384,12 @@ function createInlinePopup(selectedText, options = {}) {
     }
 
     .form-input:hover {
-      border-color: #4A90E2;
+      border-color: #2563EB;
     }
 
     .form-input:focus {
       outline: none;
-      border-color: #4A90E2;
+      border-color: #2563EB;
       box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
     }
 
@@ -447,7 +468,7 @@ function createInlinePopup(selectedText, options = {}) {
     }
 
     .form-link {
-      color: #357ABD;
+      color: #1D4ED8;
       text-decoration: none;
       font-weight: 600;
       margin-left: 4px;
@@ -459,7 +480,7 @@ function createInlinePopup(selectedText, options = {}) {
     
     .explain-btn {
       width: 100%;
-      background: #4A90E2;
+      background: #2563EB;
       color: white;
       border: none;
       padding: 14px 20px;
@@ -473,7 +494,7 @@ function createInlinePopup(selectedText, options = {}) {
     }
     
     .explain-btn:hover {
-      background: #357ABD;
+      background: #1D4ED8;
       box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
       transform: translateY(-1px);
     }
@@ -516,7 +537,7 @@ function createInlinePopup(selectedText, options = {}) {
     
     .spinner {
       border: 4px solid #f3f3f3;
-      border-top: 4px solid #4A90E2;
+      border-top: 4px solid #2563EB;
       border-radius: 50%;
       width: 50px;
       height: 50px;
@@ -579,7 +600,7 @@ function createInlinePopup(selectedText, options = {}) {
     }
     
     .copy-btn {
-      background: #4A90E2;
+      background: #2563EB;
       color: white;
       border: none;
       padding: 8px 16px;
@@ -590,11 +611,11 @@ function createInlinePopup(selectedText, options = {}) {
     }
     
     .copy-btn:hover {
-      background: #357ABD;
+      background: #1D4ED8;
     }
     
     .copy-btn.copied {
-      background: #50E3C2;
+      background: #10B981;
     }
     
     .error {
@@ -609,7 +630,7 @@ function createInlinePopup(selectedText, options = {}) {
     }
     
     .retry-btn {
-      background: #4A90E2;
+      background: #2563EB;
       color: white;
       border: none;
       padding: 10px 20px;
@@ -641,9 +662,21 @@ function createInlinePopup(selectedText, options = {}) {
     popup.className = 'popup';
     popup.innerHTML = `
       <div class="header">
-        <div class="title">🔍 ExplainIt!</div>
+        <div class="title">
+          <span class="title-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="7"></circle>
+              <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+            </svg>
+          </span>
+          <span>ExplainIt!</span>
+        </div>
         <div style="display: flex; align-items: center;">
-          <button class="settings-btn" title="Settings">⚙️</button>
+          <button class="settings-btn" title="Settings" aria-label="Settings">
+            <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" aria-hidden="true">
+              <path d="M17.43 10.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C12.46 2.18 12.25 2 12 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM10 13c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/>
+            </svg>
+          </button>
           <button class="close-btn">×</button>
         </div>
       </div>

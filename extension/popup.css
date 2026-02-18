@@ -14,22 +14,22 @@
 
 :root {
   /* Brand Colors */
-  --color-primary: #4A90E2;
-  --color-primary-hover: #357ABD;
-  --color-primary-light: #E8F2FC;
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-primary-light: #DBEAFE;
   
   /* Neutral Colors */
-  --color-text: #333333;
-  --color-text-secondary: #666666;
-  --color-text-muted: #999999;
+  --color-text: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748B;
   --color-bg: #FFFFFF;
-  --color-bg-secondary: #F7F9FC;
-  --color-border: #E1E8ED;
+  --color-bg-secondary: #F8FAFC;
+  --color-border: #CBD5E1;
   
   /* Semantic Colors */
-  --color-success: #50E3C2;
-  --color-error: #FF6B6B;
-  --color-warning: #F5A623;
+  --color-success: #10B981;
+  --color-error: #EF4444;
+  --color-warning: #F59E0B;
   
   /* Spacing */
   --spacing-xs: 4px;
@@ -110,8 +110,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  font-size: var(--font-size-base);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.22);
+}
+
+.logo-icon svg {
+  display: block;
 }
 
 .logo-text {
@@ -190,7 +193,7 @@ body {
 }
 
 .empty-icon {
-  font-size: 48px;
+  color: var(--color-primary);
   margin-bottom: var(--spacing-md);
 }
 
@@ -222,7 +225,10 @@ body {
 }
 
 .feature-icon {
-  font-size: 24px;
+  color: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .feature-text {
