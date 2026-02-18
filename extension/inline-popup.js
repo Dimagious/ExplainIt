@@ -217,6 +217,11 @@ function createInlinePopup(selectedText, options = {}) {
       padding: 0;
       box-sizing: border-box;
     }
+
+    :focus-visible {
+      outline: 2px solid #2563EB;
+      outline-offset: 2px;
+    }
     
     .popup {
       background: white;
@@ -639,6 +644,13 @@ function createInlinePopup(selectedText, options = {}) {
       font-size: 14px;
       margin-top: 16px;
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
   `;
   
   popupShadowRoot.appendChild(style);
@@ -677,7 +689,7 @@ function createInlinePopup(selectedText, options = {}) {
               <path d="M17.43 10.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C12.46 2.18 12.25 2 12 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM10 13c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/>
             </svg>
           </button>
-          <button class="close-btn">×</button>
+          <button class="close-btn" aria-label="Close">×</button>
         </div>
       </div>
       <div class="content">
@@ -716,7 +728,7 @@ function createInlinePopup(selectedText, options = {}) {
               <button id="inline-toggle-key-btn" class="toggle-key-btn" type="button" title="Show / hide key">👁️</button>
             </div>
             <div class="inline-key-row">
-              <span id="inline-key-status" class="inline-key-status not-set">Not set</span>
+              <span id="inline-key-status" class="inline-key-status not-set" aria-live="polite">Not set</span>
               <button id="inline-test-key-btn" class="test-key-btn" type="button">Test key</button>
             </div>
           </div>
@@ -744,7 +756,7 @@ function createInlinePopup(selectedText, options = {}) {
             </select>
           </div>
           <button id="inline-save-settings-btn" class="explain-btn">${hasSelectedText ? 'Save & Explain' : 'Save Settings'}</button>
-          <div id="inline-save-note" class="save-note"></div>
+          <div id="inline-save-note" class="save-note" aria-live="polite"></div>
         </div>
         <div id="inline-result-area" style="display: ${openSettings ? 'none' : 'block'};">
           <div class="loading">

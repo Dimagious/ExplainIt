@@ -118,6 +118,11 @@ const ICON_STYLES = `
   .explainit-icon:active {
     transform: scale(0.95);
   }
+
+  .explainit-icon:focus-visible {
+    outline: 2px solid #2563EB;
+    outline-offset: 2px;
+  }
   
   .settings-gear {
     width: 24px;
@@ -151,6 +156,11 @@ const ICON_STYLES = `
     background: #1D4ED8;
     transform: translateX(0) scale(1.1);
   }
+
+  .settings-gear:focus-visible {
+    outline: 2px solid #2563EB;
+    outline-offset: 2px;
+  }
   
   .tooltip {
     position: absolute;
@@ -182,6 +192,13 @@ const ICON_STYLES = `
   
   .icon-wrapper:hover .tooltip {
     opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      transition: none !important;
+      animation: none !important;
+    }
   }
 `;
 
@@ -222,6 +239,9 @@ function createFloatingIcon() {
   icon.className = 'explainit-icon';
   icon.innerHTML = ICON_SVG;
   icon.setAttribute('title', 'Explain selected text');
+  icon.setAttribute('role', 'button');
+  icon.setAttribute('tabindex', '0');
+  icon.setAttribute('aria-label', 'Explain selected text');
   
   // Create tooltip
   const tooltip = document.createElement('div');
@@ -237,9 +257,17 @@ function createFloatingIcon() {
     </svg>
   `;
   settingsGear.setAttribute('title', 'Open settings');
+  settingsGear.setAttribute('role', 'button');
+  settingsGear.setAttribute('tabindex', '0');
+  settingsGear.setAttribute('aria-label', 'Open settings');
   
   // Add click handler to main icon
   icon.addEventListener('click', handleIconClick);
+  icon.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    handleIconClick(event);
+  });
   
   // Add click handler to settings gear
   settingsGear.addEventListener('click', (e) => {
@@ -253,6 +281,11 @@ function createFloatingIcon() {
     } else {
       console.error('[ExplainIt] inline-popup.js not loaded!');
     }
+  });
+  settingsGear.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    settingsGear.click();
   });
   
   // Assemble structure

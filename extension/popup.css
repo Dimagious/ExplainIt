@@ -664,6 +664,11 @@ body {
   background: var(--color-bg-secondary);
 }
 
+.provider-card:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
 /* Selected state via :has() — Chrome 105+ */
 .provider-card:has(input:checked) {
   border-color: var(--color-primary);
@@ -855,6 +860,19 @@ body {
 
 .hidden {
   display: none !important;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Responsive */

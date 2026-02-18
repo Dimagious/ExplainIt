@@ -145,6 +145,12 @@ function showScreen(screenId) {
     target.classList.add('active');
     target.style.display = 'flex';
     currentScreen = screenId;
+
+    if (screenId === 'settings') {
+      document.getElementById('back-btn')?.focus();
+    } else if (screenId === 'result') {
+      document.getElementById('settings-btn')?.focus();
+    }
   }
 }
 
@@ -300,6 +306,14 @@ function setKeyStatus(providerId, status, message = '') {
   }
 }
 
+function updateProviderCardAria() {
+  document.querySelectorAll('.provider-card').forEach((card) => {
+    card.setAttribute('role', 'radio');
+    const input = card.querySelector('input[name="provider"]');
+    card.setAttribute('aria-checked', input?.checked ? 'true' : 'false');
+  });
+}
+
 function isKeyRelatedErrorMessage(message = '') {
   const normalized = message.toLowerCase();
   return (
@@ -358,6 +372,7 @@ function updateSettingsUI() {
   // Provider radio
   const radio = document.querySelector(`input[name="provider"][value="${settings.provider}"]`);
   if (radio) radio.checked = true;
+  updateProviderCardAria();
 
   // Reset draft keys to saved values at session start
   draftApiKeys = {};
@@ -419,6 +434,7 @@ function onProviderSwitch(newProviderId) {
 
   // Load key for the newly selected provider
   updateApiKeyField(newProviderId);
+  updateProviderCardAria();
 }
 
 async function validateProviderKey(providerId, apiKey) {
@@ -505,6 +521,18 @@ function setupEventListeners() {
   document.querySelectorAll('input[name="provider"]').forEach(radio => {
     radio.addEventListener('change', (e) => {
       onProviderSwitch(e.target.value);
+    });
+  });
+
+  document.querySelectorAll('.provider-card').forEach((card) => {
+    card.tabIndex = 0;
+    card.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      const radio = card.querySelector('input[name="provider"]');
+      if (!radio) return;
+      radio.checked = true;
+      radio.dispatchEvent(new Event('change', { bubbles: true }));
     });
   });
 

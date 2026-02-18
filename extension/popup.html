@@ -31,7 +31,7 @@
       <!-- Main content area -->
       <main class="popup-content">
         <!-- Loading state (US-006) -->
-        <div id="loading-state" class="content-section hidden">
+        <div id="loading-state" class="content-section hidden" role="status" aria-live="polite">
           <div class="spinner"></div>
           <p class="loading-text">Generating explanation...</p>
           <div id="text-preview" class="text-preview"></div>
@@ -66,7 +66,7 @@
         </div>
 
         <!-- Error state (US-025/026) -->
-        <div id="error-state" class="content-section hidden">
+        <div id="error-state" class="content-section hidden" role="alert" aria-live="assertive">
           <div class="error-icon">⚠️</div>
           <p id="error-message" class="error-message"></p>
           <div class="error-actions">
@@ -138,7 +138,7 @@
 
       <main class="popup-content">
         <!-- First-run welcome notice -->
-        <div id="welcome-notice" class="welcome-notice hidden">
+        <div id="welcome-notice" class="welcome-notice hidden" aria-live="polite">
           <p class="welcome-title">Setup in 3 steps</p>
           <ol class="welcome-steps">
             <li>Choose your provider</li>
@@ -155,7 +155,7 @@
               <span class="label-icon">🤖</span>
               AI Provider
             </label>
-            <div class="provider-grid" id="provider-grid">
+            <div class="provider-grid" id="provider-grid" role="radiogroup" aria-label="AI provider">
               <label class="provider-card" data-provider="openai">
                 <input type="radio" name="provider" value="openai" />
                 <div class="provider-card-inner">
@@ -215,7 +215,7 @@
               &nbsp;·&nbsp; Stored locally on this device only
             </p>
             <div class="key-status-row">
-              <span id="api-key-status" class="key-status not-set">Not set</span>
+              <span id="api-key-status" class="key-status not-set" aria-live="polite">Not set</span>
               <button type="button" id="test-key-btn" class="btn btn-secondary btn-small">Test key</button>
             </div>
           </div>
@@ -254,7 +254,7 @@
           </div>
 
           <!-- Save Confirmation (US-012) -->
-          <div id="save-confirmation" class="save-confirmation hidden">
+          <div id="save-confirmation" class="save-confirmation hidden" aria-live="polite">
             ✓ Settings saved successfully!
           </div>
         </form>
