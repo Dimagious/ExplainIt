@@ -30,6 +30,8 @@ let persistedSettings = {
 
 // Tracks API key edits per provider during a settings session (unsaved)
 let draftApiKeys = {};
+let keyStatusByProvider = {};
+let keyStatusMessageByProvider = {};
 
 let loadingTimeoutId = null;
 let abortController = null;
@@ -41,6 +43,14 @@ const PROVIDER_META = {
   anthropic: { name: 'Anthropic', keyUrl: 'https://console.anthropic.com/settings/keys', placeholder: 'sk-ant-...' },
   gemini:    { name: 'Google',    keyUrl: 'https://aistudio.google.com/app/apikey',       placeholder: 'AIza...' },
   groq:      { name: 'Groq',      keyUrl: 'https://console.groq.com/keys',               placeholder: 'gsk_...' }
+};
+
+const KEY_STATUS_LABELS = {
+  'not-set': 'Not set',
+  saved: 'Saved',
+  testing: 'Testing...',
+  validated: 'Validated',
+  invalid: 'Invalid'
 };
 
 function storageGet(area, keys) {
@@ -194,6 +204,7 @@ async function loadSettings() {
 
   settings = cloneSettings(loaded);
   persistedSettings = cloneSettings(loaded);
+  initializeKeyStatuses();
 
   console.log('[ExplainIt] Settings loaded:', { ...settings, apiKeys: '[redacted]' });
   updateSettingsUI();
@@ -253,6 +264,42 @@ function validateSettings(s) {
   return true;
 }
 
+function inferKeyStatusFromValue(value) {
+  return value && value.trim().length > 0 ? 'saved' : 'not-set';
+}
+
+function initializeKeyStatuses() {
+  keyStatusByProvider = {};
+  keyStatusMessageByProvider = {};
+
+  Object.keys(PROVIDER_META).forEach((providerId) => {
+    const keyValue = settings.apiKeys?.[providerId] || '';
+    keyStatusByProvider[providerId] = inferKeyStatusFromValue(keyValue);
+    keyStatusMessageByProvider[providerId] = '';
+  });
+}
+
+function updateKeyStatusUI(providerId = settings.provider) {
+  const statusEl = document.getElementById('api-key-status');
+  if (!statusEl) return;
+
+  const status = keyStatusByProvider[providerId] || 'not-set';
+  const message = keyStatusMessageByProvider[providerId] || '';
+  const label = KEY_STATUS_LABELS[status] || KEY_STATUS_LABELS['not-set'];
+
+  statusEl.textContent = message ? `${label}: ${message}` : label;
+  statusEl.className = `key-status ${status}`;
+}
+
+function setKeyStatus(providerId, status, message = '') {
+  keyStatusByProvider[providerId] = status;
+  keyStatusMessageByProvider[providerId] = message;
+
+  if (providerId === settings.provider) {
+    updateKeyStatusUI(providerId);
+  }
+}
+
 // ─── Settings UI ──────────────────────────────────────────────────────────────
 
 function updateSettingsUI() {
@@ -280,18 +327,32 @@ function updateApiKeyField(providerId) {
   const meta = PROVIDER_META[providerId] || PROVIDER_META.openai;
   const keyInput = document.getElementById('api-key-input');
   const keyLink  = document.getElementById('get-key-link');
+  const testKeyBtn = document.getElementById('test-key-btn');
 
+  let keyValue = '';
   if (keyInput) {
     keyInput.placeholder = meta.placeholder;
     // Show saved or draft key (draft takes precedence)
-    keyInput.value = draftApiKeys[providerId] !== undefined
+    keyValue = draftApiKeys[providerId] !== undefined
       ? draftApiKeys[providerId]
       : (settings.apiKeys[providerId] || '');
+    keyInput.value = keyValue;
   }
 
   if (keyLink) {
     keyLink.href = meta.keyUrl;
     keyLink.textContent = `Get ${meta.name} API key →`;
+  }
+
+  if (!keyStatusByProvider[providerId]) {
+    keyStatusByProvider[providerId] = inferKeyStatusFromValue(keyValue);
+    keyStatusMessageByProvider[providerId] = '';
+  }
+
+  updateKeyStatusUI(providerId);
+
+  if (testKeyBtn) {
+    testKeyBtn.disabled = !keyValue.trim();
   }
 }
 
@@ -312,6 +373,24 @@ function onProviderSwitch(newProviderId) {
 
   // Load key for the newly selected provider
   updateApiKeyField(newProviderId);
+}
+
+async function validateProviderKey(providerId, apiKey) {
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: 'VALIDATE_API_KEY',
+      provider: providerId,
+      apiKey
+    });
+
+    if (!response?.success) {
+      return { success: false, error: response?.error || 'Provider rejected API key' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message || 'Validation request failed' };
+  }
 }
 
 // ─── Save confirmation ────────────────────────────────────────────────────────
@@ -386,11 +465,50 @@ function setupEventListeners() {
   // Show / hide API key toggle
   const toggleKeyBtn = document.getElementById('toggle-key-btn');
   const apiKeyInput  = document.getElementById('api-key-input');
+  const testKeyBtn = document.getElementById('test-key-btn');
   if (toggleKeyBtn && apiKeyInput) {
     toggleKeyBtn.addEventListener('click', () => {
       const isHidden = apiKeyInput.type === 'password';
       apiKeyInput.type = isHidden ? 'text' : 'password';
       toggleKeyBtn.title = isHidden ? 'Hide key' : 'Show key';
+    });
+
+    apiKeyInput.addEventListener('input', () => {
+      const provider = settings.provider;
+      const keyValue = apiKeyInput.value.trim();
+      draftApiKeys[provider] = keyValue;
+      setKeyStatus(provider, inferKeyStatusFromValue(keyValue));
+      if (testKeyBtn) {
+        testKeyBtn.disabled = !keyValue;
+      }
+    });
+  }
+
+  if (testKeyBtn) {
+    testKeyBtn.addEventListener('click', async () => {
+      const provider = settings.provider;
+      const keyValue = apiKeyInput?.value?.trim() || '';
+
+      if (!keyValue) {
+        setKeyStatus(provider, 'not-set');
+        return;
+      }
+
+      setKeyStatus(provider, 'testing');
+      testKeyBtn.disabled = true;
+      testKeyBtn.textContent = 'Testing...';
+
+      const result = await validateProviderKey(provider, keyValue);
+
+      testKeyBtn.disabled = false;
+      testKeyBtn.textContent = 'Test key';
+
+      if (result.success) {
+        setKeyStatus(provider, 'validated');
+      } else {
+        const shortError = (result.error || 'Invalid key').slice(0, 60);
+        setKeyStatus(provider, 'invalid', shortError);
+      }
     });
   }
 
@@ -420,6 +538,7 @@ function setupEventListeners() {
       saveBtn.textContent = 'Save Settings';
 
       if (result.success) {
+        setKeyStatus(provider, inferKeyStatusFromValue(currentKey));
         showSaveConfirmation(result.fallback ? 'saved-local' : 'saved');
         draftApiKeys = {};
         setTimeout(() => showScreen('result'), 1500);

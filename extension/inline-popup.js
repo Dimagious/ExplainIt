@@ -42,6 +42,14 @@ const INLINE_PROVIDER_META = {
   }
 };
 
+const INLINE_KEY_STATUS_LABELS = {
+  'not-set': 'Not set',
+  saved: 'Saved',
+  testing: 'Testing...',
+  validated: 'Validated',
+  invalid: 'Invalid'
+};
+
 function inlineStorageGet(area, keys, callback) {
   try {
     if (!area || typeof area.get !== 'function') {
@@ -345,6 +353,70 @@ function createInlinePopup(selectedText, options = {}) {
       font-size: 14px;
     }
 
+    .inline-key-row {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .inline-key-status {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      color: #666;
+      background: #f1f4f8;
+    }
+
+    .inline-key-status.not-set {
+      color: #666;
+      background: #f1f4f8;
+      border-color: #d8e0e9;
+    }
+
+    .inline-key-status.saved {
+      color: #1e5aa8;
+      background: #e8f2fc;
+      border-color: #bdd8f6;
+    }
+
+    .inline-key-status.testing {
+      color: #8b5a00;
+      background: rgba(245, 166, 35, 0.16);
+      border-color: rgba(245, 166, 35, 0.4);
+    }
+
+    .inline-key-status.validated {
+      color: #0c6b53;
+      background: rgba(80, 227, 194, 0.2);
+      border-color: rgba(80, 227, 194, 0.5);
+    }
+
+    .inline-key-status.invalid {
+      color: #b42318;
+      background: rgba(255, 107, 107, 0.14);
+      border-color: rgba(255, 107, 107, 0.35);
+    }
+
+    .test-key-btn {
+      background: #f7f9fc;
+      color: #333;
+      border: 1px solid #d8e0e9;
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .test-key-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
     .form-link {
       color: #357ABD;
       text-decoration: none;
@@ -526,6 +598,14 @@ function createInlinePopup(selectedText, options = {}) {
     let activeProvider = currentSettings.provider;
     const draftApiKeys = { ...(currentSettings.apiKeys || {}) };
     const hasSelectedText = typeof selectedText === 'string' && selectedText.trim().length > 0;
+    const keyStatusByProvider = {};
+    const keyStatusMessageByProvider = {};
+
+    Object.keys(INLINE_PROVIDER_META).forEach((providerId) => {
+      const hasKey = !!draftApiKeys[providerId];
+      keyStatusByProvider[providerId] = hasKey ? 'saved' : 'not-set';
+      keyStatusMessageByProvider[providerId] = '';
+    });
 
     // Add popup structure - show loading immediately
     const popup = document.createElement('div');
@@ -572,6 +652,10 @@ function createInlinePopup(selectedText, options = {}) {
                 spellcheck="false"
               />
               <button id="inline-toggle-key-btn" class="toggle-key-btn" type="button" title="Show / hide key">👁️</button>
+            </div>
+            <div class="inline-key-row">
+              <span id="inline-key-status" class="inline-key-status not-set">Not set</span>
+              <button id="inline-test-key-btn" class="test-key-btn" type="button">Test key</button>
             </div>
           </div>
           <div class="form-group">
@@ -622,7 +706,27 @@ function createInlinePopup(selectedText, options = {}) {
     const keyInput = popupShadowRoot.querySelector('#inline-api-key-input');
     const toggleKeyBtn = popupShadowRoot.querySelector('#inline-toggle-key-btn');
     const getKeyLink = popupShadowRoot.querySelector('#inline-get-key-link');
+    const keyStatus = popupShadowRoot.querySelector('#inline-key-status');
+    const testKeyBtn = popupShadowRoot.querySelector('#inline-test-key-btn');
     const saveNote = popupShadowRoot.querySelector('#inline-save-note');
+
+    const renderInlineKeyStatus = (providerId) => {
+      if (!keyStatus) return;
+      const status = keyStatusByProvider[providerId] || 'not-set';
+      const message = keyStatusMessageByProvider[providerId] || '';
+      const label = INLINE_KEY_STATUS_LABELS[status] || INLINE_KEY_STATUS_LABELS['not-set'];
+
+      keyStatus.textContent = message ? `${label}: ${message}` : label;
+      keyStatus.className = `inline-key-status ${status}`;
+    };
+
+    const setInlineKeyStatus = (providerId, status, message = '') => {
+      keyStatusByProvider[providerId] = status;
+      keyStatusMessageByProvider[providerId] = message;
+      if (providerId === activeProvider) {
+        renderInlineKeyStatus(providerId);
+      }
+    };
 
     const updateApiKeyField = (providerId) => {
       const meta = INLINE_PROVIDER_META[providerId] || INLINE_PROVIDER_META.openai;
@@ -638,6 +742,10 @@ function createInlinePopup(selectedText, options = {}) {
       if (providerSelect) {
         providerSelect.value = providerId;
       }
+      renderInlineKeyStatus(providerId);
+      if (testKeyBtn) {
+        testKeyBtn.disabled = !(keyInput && keyInput.value.trim());
+      }
     };
 
     updateApiKeyField(activeProvider);
@@ -646,6 +754,7 @@ function createInlinePopup(selectedText, options = {}) {
       providerSelect.addEventListener('change', () => {
         if (keyInput) {
           draftApiKeys[activeProvider] = keyInput.value.trim();
+          setInlineKeyStatus(activeProvider, draftApiKeys[activeProvider] ? 'saved' : 'not-set');
         }
         updateApiKeyField(providerSelect.value);
       });
@@ -655,6 +764,52 @@ function createInlinePopup(selectedText, options = {}) {
       toggleKeyBtn.addEventListener('click', () => {
         const hidden = keyInput.type === 'password';
         keyInput.type = hidden ? 'text' : 'password';
+      });
+    }
+
+    if (keyInput) {
+      keyInput.addEventListener('input', () => {
+        const keyValue = keyInput.value.trim();
+        draftApiKeys[activeProvider] = keyValue;
+        setInlineKeyStatus(activeProvider, keyValue ? 'saved' : 'not-set');
+        if (testKeyBtn) {
+          testKeyBtn.disabled = !keyValue;
+        }
+      });
+    }
+
+    if (testKeyBtn) {
+      testKeyBtn.addEventListener('click', async () => {
+        const apiKey = keyInput?.value?.trim() || '';
+        if (!apiKey) {
+          setInlineKeyStatus(activeProvider, 'not-set');
+          return;
+        }
+
+        setInlineKeyStatus(activeProvider, 'testing');
+        testKeyBtn.disabled = true;
+        testKeyBtn.textContent = 'Testing...';
+
+        try {
+          const response = await chrome.runtime.sendMessage({
+            type: 'VALIDATE_API_KEY',
+            provider: activeProvider,
+            apiKey
+          });
+
+          if (response?.success) {
+            setInlineKeyStatus(activeProvider, 'validated');
+          } else {
+            const shortError = (response?.error || 'Invalid key').slice(0, 60);
+            setInlineKeyStatus(activeProvider, 'invalid', shortError);
+          }
+        } catch (error) {
+          const shortError = (error?.message || 'Validation failed').slice(0, 60);
+          setInlineKeyStatus(activeProvider, 'invalid', shortError);
+        } finally {
+          testKeyBtn.textContent = 'Test key';
+          testKeyBtn.disabled = !(keyInput && keyInput.value.trim());
+        }
       });
     }
 

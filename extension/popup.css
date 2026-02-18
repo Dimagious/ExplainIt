@@ -755,6 +755,57 @@ body {
   text-decoration: underline;
 }
 
+.key-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+
+.key-status {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.key-status.not-set {
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
+}
+
+.key-status.saved {
+  color: #1e5aa8;
+  background: #e8f2fc;
+  border-color: #bdd8f6;
+}
+
+.key-status.testing {
+  color: #8b5a00;
+  background: rgba(245, 166, 35, 0.16);
+  border-color: rgba(245, 166, 35, 0.4);
+}
+
+.key-status.validated {
+  color: #0c6b53;
+  background: rgba(80, 227, 194, 0.2);
+  border-color: rgba(80, 227, 194, 0.5);
+}
+
+.key-status.invalid {
+  color: #b42318;
+  background: rgba(255, 107, 107, 0.14);
+  border-color: rgba(255, 107, 107, 0.35);
+}
+
+.btn-small {
+  padding: 8px 12px;
+  font-size: var(--font-size-sm);
+}
+
 /* ─── Welcome / first-run notice ─────────────────────────────────────────── */
 
 .welcome-notice {
