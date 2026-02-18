@@ -238,11 +238,11 @@ function createFloatingIcon() {
     e.preventDefault();
     // Hide floating icon
     removeFloatingIcon();
-    // Show settings popup (same mechanism as inline popup)
-    if (typeof createSettingsPopup === 'function') {
-      createSettingsPopup();
+    // Open unified inline settings flow (provider + key + language + tone)
+    if (typeof createInlinePopup === 'function') {
+      createInlinePopup(selectedText, { openSettings: true, skipImmediateFetch: true });
     } else {
-      console.error('[ExplainIt] createSettingsPopup not available!');
+      console.error('[ExplainIt] inline-popup.js not loaded!');
     }
   });
   

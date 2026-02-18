@@ -8,16 +8,146 @@
 
 let inlinePopup = null;
 let popupShadowRoot = null;
-let settingsPopup = null;
-let settingsPopupShadowRoot = null;
 let retryCount = 0;
 let currentText = null;
-let currentSettings = { language: 'en', tone: 'simple', provider: 'openai' };
+let currentSettings = { language: 'en', tone: 'simple', provider: 'openai', apiKeys: {} };
+
+const INLINE_DEFAULT_SETTINGS = {
+  language: 'en',
+  tone: 'simple',
+  provider: 'openai',
+  apiKeys: {}
+};
+
+const INLINE_PROVIDER_META = {
+  openai: {
+    name: 'OpenAI',
+    placeholder: 'sk-...',
+    keyUrl: 'https://platform.openai.com/api-keys'
+  },
+  anthropic: {
+    name: 'Anthropic',
+    placeholder: 'sk-ant-...',
+    keyUrl: 'https://console.anthropic.com/settings/keys'
+  },
+  gemini: {
+    name: 'Google',
+    placeholder: 'AIza...',
+    keyUrl: 'https://aistudio.google.com/app/apikey'
+  },
+  groq: {
+    name: 'Groq',
+    placeholder: 'gsk_...',
+    keyUrl: 'https://console.groq.com/keys'
+  }
+};
+
+function inlineStorageGet(area, keys, callback) {
+  try {
+    if (!area || typeof area.get !== 'function') {
+      callback(new Error('Storage area unavailable'), {});
+      return;
+    }
+
+    area.get(keys, (result) => {
+      const runtimeError = chrome?.runtime?.lastError;
+      if (runtimeError) {
+        callback(new Error(runtimeError.message), {});
+        return;
+      }
+      callback(null, result || {});
+    });
+  } catch (error) {
+    callback(error, {});
+  }
+}
+
+function inlineStorageSet(area, payload, callback) {
+  try {
+    if (!area || typeof area.set !== 'function') {
+      callback(new Error('Storage area unavailable'));
+      return;
+    }
+
+    area.set(payload, () => {
+      const runtimeError = chrome?.runtime?.lastError;
+      callback(runtimeError ? new Error(runtimeError.message) : null);
+    });
+  } catch (error) {
+    callback(error);
+  }
+}
+
+function loadInlineSettings(callback) {
+  inlineStorageGet(chrome.storage.sync, ['language', 'tone'], (syncError, syncStored) => {
+    if (syncError) {
+      console.error('[InlinePopup] Failed to load sync settings:', syncError);
+    }
+
+    inlineStorageGet(
+      chrome.storage.local,
+      ['provider', 'apiKeys', 'language', 'tone'],
+      (localError, localStored) => {
+        if (localError) {
+          console.error('[InlinePopup] Failed to load local settings:', localError);
+        }
+
+        currentSettings = {
+          language: syncStored.language || localStored.language || INLINE_DEFAULT_SETTINGS.language,
+          tone: syncStored.tone || localStored.tone || INLINE_DEFAULT_SETTINGS.tone,
+          provider: localStored.provider || INLINE_DEFAULT_SETTINGS.provider,
+          apiKeys: { ...(localStored.apiKeys || {}) }
+        };
+
+        callback(currentSettings);
+      }
+    );
+  });
+}
+
+function saveInlineSettings(nextSettings, callback) {
+  const normalized = {
+    language: nextSettings.language || INLINE_DEFAULT_SETTINGS.language,
+    tone: nextSettings.tone || INLINE_DEFAULT_SETTINGS.tone,
+    provider: nextSettings.provider || INLINE_DEFAULT_SETTINGS.provider,
+    apiKeys: { ...(nextSettings.apiKeys || {}) }
+  };
+
+  inlineStorageSet(
+    chrome.storage.sync,
+    { language: normalized.language, tone: normalized.tone },
+    (syncError) => {
+      if (syncError) {
+        console.error('[InlinePopup] Failed to save sync settings:', syncError);
+      }
+
+      inlineStorageSet(
+        chrome.storage.local,
+        { provider: normalized.provider, apiKeys: normalized.apiKeys },
+        (localError) => {
+          if (localError) {
+            callback({
+              success: false,
+              error: 'Failed to save settings to local storage'
+            });
+            return;
+          }
+
+          currentSettings = normalized;
+          callback({ success: true, fallback: !!syncError });
+        }
+      );
+    }
+  );
+}
 
 /**
  * Create inline popup window
  */
-function createInlinePopup(selectedText) {
+function createInlinePopup(selectedText, options = {}) {
+  const openSettings = options.openSettings === true;
+  const skipImmediateFetch = options.skipImmediateFetch === true;
+
   // Remove existing popup if any
   removeInlinePopup();
   
@@ -177,6 +307,54 @@ function createInlinePopup(selectedText) {
       border-color: #4A90E2;
       box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
     }
+
+    .api-key-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px 42px 10px 14px;
+      border: 2px solid #e1e8ed;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #333;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .form-input:hover {
+      border-color: #4A90E2;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: #4A90E2;
+      box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+    }
+
+    .toggle-key-btn {
+      position: absolute;
+      right: 8px;
+      background: none;
+      border: none;
+      color: #666;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .form-link {
+      color: #357ABD;
+      text-decoration: none;
+      font-weight: 600;
+      margin-left: 4px;
+    }
+
+    .form-link:hover {
+      text-decoration: underline;
+    }
     
     .explain-btn {
       width: 100%;
@@ -208,6 +386,26 @@ function createInlinePopup(selectedText) {
       cursor: not-allowed;
       box-shadow: none;
       transform: none;
+    }
+
+    .save-note {
+      margin-top: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      min-height: 16px;
+    }
+
+    .save-note.success {
+      color: #0E8C6D;
+    }
+
+    .save-note.warning {
+      color: #C26A00;
+    }
+
+    .save-note.error {
+      color: #D93025;
     }
     
     .loading {
@@ -324,14 +522,11 @@ function createInlinePopup(selectedText) {
   popupShadowRoot.appendChild(style);
   
   // Load current settings
-  chrome.storage.sync.get(['language', 'tone'], (syncStored) => {
-    chrome.storage.local.get(['provider'], (localStored) => {
-      currentSettings = {
-        language: syncStored.language || 'en',
-        tone: syncStored.tone || 'simple',
-        provider: localStored.provider || 'openai'
-      };
-    
+  loadInlineSettings(() => {
+    let activeProvider = currentSettings.provider;
+    const draftApiKeys = { ...(currentSettings.apiKeys || {}) };
+    const hasSelectedText = typeof selectedText === 'string' && selectedText.trim().length > 0;
+
     // Add popup structure - show loading immediately
     const popup = document.createElement('div');
     popup.className = 'popup';
@@ -344,7 +539,7 @@ function createInlinePopup(selectedText) {
         </div>
       </div>
       <div class="content">
-        <div class="settings-form" id="inline-settings-form" style="display: none;">
+        <div class="settings-form" id="inline-settings-form" style="display: ${openSettings ? 'block' : 'none'};">
           <div class="form-group">
             <label class="form-label">
               <span>🤖</span>
@@ -357,6 +552,27 @@ function createInlinePopup(selectedText) {
               <option value="gemini" ${currentSettings.provider === 'gemini' ? 'selected' : ''}>Google Gemini (Flash)</option>
               <option value="groq" ${currentSettings.provider === 'groq' ? 'selected' : ''}>Groq (Llama 3.3 70B)</option>
             </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <span>🔑</span>
+              <span>API Key</span>
+            </label>
+            <div class="form-description">
+              Stored locally on this device only.
+              <a id="inline-get-key-link" class="form-link" href="#" target="_blank" rel="noopener noreferrer">Get key →</a>
+            </div>
+            <div class="api-key-wrapper">
+              <input
+                id="inline-api-key-input"
+                class="form-input"
+                type="password"
+                placeholder="Paste your API key"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <button id="inline-toggle-key-btn" class="toggle-key-btn" type="button" title="Show / hide key">👁️</button>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">
@@ -381,9 +597,10 @@ function createInlinePopup(selectedText) {
               <option value="expert" ${currentSettings.tone === 'expert' ? 'selected' : ''}>Expert level</option>
             </select>
           </div>
-          <button id="inline-save-settings-btn" class="explain-btn">Save & Explain</button>
+          <button id="inline-save-settings-btn" class="explain-btn">${hasSelectedText ? 'Save & Explain' : 'Save Settings'}</button>
+          <div id="inline-save-note" class="save-note"></div>
         </div>
-        <div id="inline-result-area">
+        <div id="inline-result-area" style="display: ${openSettings ? 'none' : 'block'};">
           <div class="loading">
             <div class="spinner"></div>
             <div class="loading-text">Generating explanation...</div>
@@ -401,7 +618,46 @@ function createInlinePopup(selectedText) {
     const settingsBtn = popupShadowRoot.querySelector('.settings-btn');
     const settingsForm = popupShadowRoot.querySelector('#inline-settings-form');
     const resultArea = popupShadowRoot.querySelector('#inline-result-area');
-    
+    const providerSelect = popupShadowRoot.querySelector('#inline-provider-select');
+    const keyInput = popupShadowRoot.querySelector('#inline-api-key-input');
+    const toggleKeyBtn = popupShadowRoot.querySelector('#inline-toggle-key-btn');
+    const getKeyLink = popupShadowRoot.querySelector('#inline-get-key-link');
+    const saveNote = popupShadowRoot.querySelector('#inline-save-note');
+
+    const updateApiKeyField = (providerId) => {
+      const meta = INLINE_PROVIDER_META[providerId] || INLINE_PROVIDER_META.openai;
+      activeProvider = providerId;
+      if (getKeyLink) {
+        getKeyLink.href = meta.keyUrl;
+        getKeyLink.textContent = `Get ${meta.name} key →`;
+      }
+      if (keyInput) {
+        keyInput.placeholder = meta.placeholder;
+        keyInput.value = draftApiKeys[providerId] || '';
+      }
+      if (providerSelect) {
+        providerSelect.value = providerId;
+      }
+    };
+
+    updateApiKeyField(activeProvider);
+
+    if (providerSelect) {
+      providerSelect.addEventListener('change', () => {
+        if (keyInput) {
+          draftApiKeys[activeProvider] = keyInput.value.trim();
+        }
+        updateApiKeyField(providerSelect.value);
+      });
+    }
+
+    if (toggleKeyBtn && keyInput) {
+      toggleKeyBtn.addEventListener('click', () => {
+        const hidden = keyInput.type === 'password';
+        keyInput.type = hidden ? 'text' : 'password';
+      });
+    }
+
     settingsBtn.addEventListener('click', () => {
       // Toggle settings form visibility
       if (settingsForm.style.display === 'none') {
@@ -410,45 +666,70 @@ function createInlinePopup(selectedText) {
       } else {
         settingsForm.style.display = 'none';
         resultArea.style.display = 'block';
+        saveNote.textContent = '';
+        saveNote.className = 'save-note';
       }
     });
-    
+
     const saveSettingsBtn = popupShadowRoot.querySelector('#inline-save-settings-btn');
     saveSettingsBtn.addEventListener('click', () => {
-      const providerSelect = popupShadowRoot.querySelector('#inline-provider-select');
       const languageSelect = popupShadowRoot.querySelector('#inline-language-select');
       const toneSelect = popupShadowRoot.querySelector('#inline-tone-select');
-      
-      currentSettings = {
-        provider: providerSelect.value,
+
+      if (keyInput) {
+        draftApiKeys[activeProvider] = keyInput.value.trim();
+      }
+
+      const nextSettings = {
+        provider: activeProvider,
         language: languageSelect.value,
-        tone: toneSelect.value
+        tone: toneSelect.value,
+        apiKeys: {
+          ...(currentSettings.apiKeys || {}),
+          ...draftApiKeys
+        }
       };
-      
-      // Save settings
-      chrome.storage.sync.set({
-        language: currentSettings.language,
-        tone: currentSettings.tone
+
+      saveSettingsBtn.disabled = true;
+      saveSettingsBtn.textContent = 'Saving...';
+
+      saveInlineSettings(nextSettings, (result) => {
+        saveSettingsBtn.disabled = false;
+        saveSettingsBtn.textContent = hasSelectedText ? 'Save & Explain' : 'Save Settings';
+
+        if (!result.success) {
+          saveNote.textContent = result.error || 'Failed to save settings';
+          saveNote.className = 'save-note error';
+          return;
+        }
+
+        saveNote.textContent = result.fallback
+          ? 'Saved locally (sync unavailable)'
+          : 'Settings saved';
+        saveNote.className = `save-note ${result.fallback ? 'warning' : 'success'}`;
+
+        if (hasSelectedText) {
+          settingsForm.style.display = 'none';
+          resultArea.style.display = 'block';
+          resultArea.innerHTML = `
+            <div class="loading">
+              <div class="spinner"></div>
+              <div class="loading-text">Generating explanation...</div>
+            </div>
+          `;
+          fetchExplanation(selectedText);
+        }
       });
-      chrome.storage.local.set({
-        provider: currentSettings.provider
-      });
-      
-      // Hide settings form and show loading
-      settingsForm.style.display = 'none';
-      resultArea.style.display = 'block';
-      
-      // Fetch explanation with new settings
-      fetchExplanation(selectedText);
     });
-    
+
     // Add to page
     document.body.appendChild(container);
     inlinePopup = container;
-    
+
     // Immediately fetch explanation
-    fetchExplanation(selectedText);
-    });
+    if (!skipImmediateFetch && hasSelectedText) {
+      fetchExplanation(selectedText);
+    }
   });
 }
 
@@ -667,296 +948,11 @@ function showError(message, originalText) {
   });
 }
 
-/**
- * Create settings popup (same mechanism as inline popup)
- */
-function createSettingsPopup() {
-  // Remove existing popups if any
-  removeInlinePopup();
-  removeSettingsPopup();
-  
-  // Load current settings
-  chrome.storage.sync.get(['language', 'tone'], (stored) => {
-    const settings = {
-      language: stored.language || 'en',
-      tone: stored.tone || 'simple'
-    };
-    
-    // Create container
-    const container = document.createElement('div');
-    container.id = 'explainit-settings-popup-container';
-    container.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 999999;
-      width: 400px;
-      max-width: 90vw;
-      max-height: 80vh;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-      border-radius: 12px;
-      overflow: hidden;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    `;
-    
-    // Create shadow DOM for isolation
-    settingsPopupShadowRoot = container.attachShadow({ mode: 'open' });
-    
-    // Add styles (reuse from inline popup)
-    const style = document.createElement('style');
-    style.textContent = `
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      
-      .popup {
-        background: white;
-        display: flex;
-        flex-direction: column;
-        max-height: 80vh;
-        animation: slideIn 0.3s ease-out;
-      }
-      
-      @keyframes slideIn {
-        from {
-          opacity: 0;
-          transform: translateY(-20px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-      
-      .header {
-        padding: 16px 20px;
-        background: #4A90E2;
-        color: white;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      
-      .title {
-        font-size: 18px;
-        font-weight: 600;
-      }
-      
-      .close-btn {
-        background: none;
-        border: none;
-        color: white;
-        font-size: 24px;
-        cursor: pointer;
-        padding: 0;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 4px;
-        transition: background 0.2s;
-      }
-      
-      .close-btn:hover {
-        background: rgba(255, 255, 255, 0.2);
-      }
-      
-      .content {
-        padding: 24px;
-        overflow-y: auto;
-        flex: 1;
-      }
-      
-      .form-group {
-        margin-bottom: 24px;
-      }
-      
-      .form-group:last-of-type {
-        margin-bottom: 0;
-      }
-      
-      .form-label {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 8px;
-      }
-      
-      .form-description {
-        font-size: 13px;
-        color: #666;
-        margin-bottom: 12px;
-        line-height: 1.5;
-      }
-      
-      .form-select {
-        width: 100%;
-        padding: 10px 14px;
-        border: 2px solid #e1e8ed;
-        border-radius: 8px;
-        font-size: 14px;
-        background: white;
-        color: #333;
-        cursor: pointer;
-        transition: all 0.2s;
-        font-family: inherit;
-      }
-      
-      .form-select:hover {
-        border-color: #4A90E2;
-      }
-      
-      .form-select:focus {
-        outline: none;
-        border-color: #4A90E2;
-        box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
-      }
-      
-      .save-btn {
-        width: 100%;
-        background: #4A90E2;
-        color: white;
-        border: none;
-        padding: 14px 20px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 15px;
-        font-weight: 600;
-        margin-top: 8px;
-        transition: all 0.2s;
-        box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
-      }
-      
-      .save-btn:hover {
-        background: #357ABD;
-        box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
-        transform: translateY(-1px);
-      }
-      
-      .save-btn:active {
-        transform: translateY(0);
-      }
-      
-      .save-confirmation {
-        margin-top: 12px;
-        padding: 10px;
-        background: #50E3C2;
-        color: white;
-        border-radius: 6px;
-        text-align: center;
-        font-size: 13px;
-        font-weight: 500;
-        opacity: 0;
-        transition: opacity 0.3s;
-      }
-      
-      .save-confirmation.show {
-        opacity: 1;
-      }
-    `;
-    
-    settingsPopupShadowRoot.appendChild(style);
-    
-    // Create popup structure
-    const popup = document.createElement('div');
-    popup.className = 'popup';
-    popup.innerHTML = `
-      <div class="header">
-        <div class="title">🔍 ExplainIt!</div>
-        <button class="close-btn">×</button>
-      </div>
-      <div class="content">
-        <div class="form-group">
-          <label class="form-label">
-            <span>🌍</span>
-            <span>Explanation Language</span>
-          </label>
-          <div class="form-description">Your explanations will be provided in this language.</div>
-          <select id="settings-language-select" class="form-select">
-            <option value="en" ${settings.language === 'en' ? 'selected' : ''}>English</option>
-            <option value="ru" ${settings.language === 'ru' ? 'selected' : ''}>Русский</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">
-            <span>🎯</span>
-            <span>Explanation Tone</span>
-          </label>
-          <div class="form-description">Choose how detailed and accessible the explanation should be.</div>
-          <select id="settings-tone-select" class="form-select">
-            <option value="simple" ${settings.tone === 'simple' ? 'selected' : ''}>Simple words</option>
-            <option value="kid" ${settings.tone === 'kid' ? 'selected' : ''}>Like I'm 5</option>
-            <option value="expert" ${settings.tone === 'expert' ? 'selected' : ''}>Expert level</option>
-          </select>
-        </div>
-        <button id="settings-save-btn" class="save-btn">Save Settings</button>
-        <div id="settings-confirmation" class="save-confirmation">✓ Settings saved successfully!</div>
-      </div>
-    `;
-    
-    settingsPopupShadowRoot.appendChild(popup);
-    
-    // Add event handlers
-    const closeBtn = settingsPopupShadowRoot.querySelector('.close-btn');
-    closeBtn.addEventListener('click', removeSettingsPopup);
-    
-    const saveBtn = settingsPopupShadowRoot.querySelector('#settings-save-btn');
-    const confirmation = settingsPopupShadowRoot.querySelector('#settings-confirmation');
-    
-    saveBtn.addEventListener('click', () => {
-      const languageSelect = settingsPopupShadowRoot.querySelector('#settings-language-select');
-      const toneSelect = settingsPopupShadowRoot.querySelector('#settings-tone-select');
-      
-      const newSettings = {
-        language: languageSelect.value,
-        tone: toneSelect.value
-      };
-      
-      // Save settings
-      chrome.storage.sync.set(newSettings, () => {
-        // Update current settings
-        currentSettings = newSettings;
-        
-        // Show confirmation
-        confirmation.classList.add('show');
-        setTimeout(() => {
-          confirmation.classList.remove('show');
-        }, 2000);
-      });
-    });
-    
-    // Add to page
-    document.body.appendChild(container);
-    settingsPopup = container;
-  });
-}
-
-/**
- * Remove settings popup
- */
-function removeSettingsPopup() {
-  if (settingsPopup && settingsPopup.parentNode) {
-    settingsPopup.parentNode.removeChild(settingsPopup);
-    settingsPopup = null;
-    settingsPopupShadowRoot = null;
-  }
-}
-
 // Close on ESC key
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (inlinePopup) {
       removeInlinePopup();
-    }
-    if (settingsPopup) {
-      removeSettingsPopup();
     }
   }
 });
@@ -965,8 +961,5 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('click', (e) => {
   if (inlinePopup && !inlinePopup.contains(e.target)) {
     removeInlinePopup();
-  }
-  if (settingsPopup && !settingsPopup.contains(e.target)) {
-    removeSettingsPopup();
   }
 });
