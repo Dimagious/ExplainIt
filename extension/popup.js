@@ -129,9 +129,10 @@ function validateSettings(s) {
   const validTones = ['simple', 'kid', 'expert'];
   const validProviders = ['openai', 'anthropic', 'gemini', 'groq'];
 
-  if (s.language && !validLanguages.includes(s.language)) return false;
-  if (s.tone     && !validTones.includes(s.tone))         return false;
-  if (s.provider && !validProviders.includes(s.provider)) return false;
+  // Use !== undefined so empty string '' is treated as invalid (not skipped as falsy)
+  if (s.language !== undefined && !validLanguages.includes(s.language)) return false;
+  if (s.tone     !== undefined && !validTones.includes(s.tone))         return false;
+  if (s.provider !== undefined && !validProviders.includes(s.provider)) return false;
 
   return true;
 }

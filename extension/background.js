@@ -105,7 +105,9 @@ async function callOpenAICompatible(url, apiKey, model, prompt) {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+    const err = new Error(errorData.error?.message || `HTTP ${response.status}`);
+    err.status = response.status;
+    throw err;
   }
 
   const data = await response.json();
@@ -134,7 +136,9 @@ async function callAnthropic(apiKey, model, prompt) {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+    const err = new Error(errorData.error?.message || `HTTP ${response.status}`);
+    err.status = response.status;
+    throw err;
   }
 
   const data = await response.json();
@@ -160,7 +164,9 @@ async function callGemini(apiKey, model, prompt) {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+    const err = new Error(errorData.error?.message || `HTTP ${response.status}`);
+    err.status = response.status;
+    throw err;
   }
 
   const data = await response.json();
@@ -207,8 +213,8 @@ async function fetchExplanationWithResilience(providerId, apiKey, text, tone, la
         error.message.includes('timeout') ||
         error.message.includes('network') ||
         error.message.includes('fetch') ||
-        error.message.includes('500') ||
-        error.message.includes('429');
+        error.status >= 500 ||
+        error.status === 429;
 
       if (isRetryable && attempt < RETRY_ATTEMPTS) {
         const delay = RETRY_DELAY_MS * Math.pow(2, attempt);
@@ -314,3 +320,17 @@ setInterval(() => {
 }, 60000);
 
 console.log('[Background] ExplainIt! service worker initialized (multi-provider mode)');
+
+// Export pure functions for testing (no-op in service worker context)
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    buildPrompt,
+    callOpenAICompatible,
+    callAnthropic,
+    callGemini,
+    callProvider,
+    fetchExplanationWithResilience,
+    PROVIDER_CONFIGS,
+    PROMPTS
+  };
+}
