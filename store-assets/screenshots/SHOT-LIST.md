@@ -45,19 +45,32 @@ the selection.
 
 ---
 
-## Slot 3 — Russian explanation of English source
+## Slot 3 — Multilingual montage (13 languages) — updated for v2.1.0
 
-**Subject:** Source paragraph in English (arXiv abstract works well), popup
-on the right showing a fluent Russian explanation.
+**Subject:** A central English-source paragraph (Bloomberg / arXiv /
+dense news) surrounded by 4–5 small ExplainIt popup cards, each
+showing the explanation in a different language with visually distinct
+script.
+
+**Languages to feature for script variety:**
+- 🇷🇺 Русский (Cyrillic — preserves the killer-feature RU shot)
+- 🇨🇳 中文 (Han characters)
+- 🇸🇦 العربية (Arabic + right-to-left layout — unique differentiator)
+- 🇯🇵 日本語 (mixed kanji + hiragana)
+- 🇪🇸 Español (Latin script for familiarity)
 
 **Composition:**
-- Source page on the left, popup on the right
-- Both fully readable
-- Russian text typographically correct (proper kerning, no Latin-in-mask)
+- Central English source paragraph
+- 4–5 popup cards arranged around it
+- Each card legible at its size
+- **Arabic card MUST render RTL** (text aligned right edge)
 
 **On-image text:**
-- Banner: **"Reads English. Explains in your language."**
-- Subcopy: "English, Russian — more coming."
+- Banner: **"Read English content in 13 languages."**
+- Subcopy: "From a single English source — into your language."
+
+Brief for the design-AI to render this exact slot lives in
+[`docs/marketing/DESIGN-AI-BRIEF-2.1.md`](../../docs/marketing/DESIGN-AI-BRIEF-2.1.md).
 
 ---
 
