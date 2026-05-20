@@ -13,7 +13,8 @@ const DEFAULT_SETTINGS = {
   language: 'en',
   tone: 'simple',
   provider: 'groq',
-  apiKeys: {}   // { openai: '...', anthropic: '...', gemini: '...', groq: '...' }
+  apiKeys: {},   // { openai: '...', anthropic: '...', gemini: '...', groq: '...' }
+  setupCompleted: false
 };
 
 // Runtime settings (mutable, can include unsaved edits in Settings screen)
@@ -168,7 +169,8 @@ function cloneSettings(source = {}) {
     language: source.language || DEFAULT_SETTINGS.language,
     tone: source.tone || DEFAULT_SETTINGS.tone,
     provider: source.provider || DEFAULT_SETTINGS.provider,
-    apiKeys: { ...(source.apiKeys || {}) }
+    apiKeys: { ...(source.apiKeys || {}) },
+    setupCompleted: source.setupCompleted === true
   };
 }
 
@@ -233,19 +235,27 @@ async function loadSettings() {
     }
   }
 
-  // Provider + API keys are local only (security)
+  // Provider + API keys + setupCompleted are local only (security)
   try {
-    localStored = await storageGet(chrome.storage.local, ['provider', 'apiKeys']);
+    localStored = await storageGet(chrome.storage.local, ['provider', 'apiKeys', 'setupCompleted']);
   } catch (error) {
     console.error('[ExplainIt] Error loading local settings:', error);
     localStored = {};
   }
 
+  // Legacy migration: a returning user from before setupCompleted existed
+  // already has API keys. Treat them as set up so we don't ambush them
+  // with the welcome notice after the update.
+  const legacyHasKey = localStored.apiKeys &&
+    Object.values(localStored.apiKeys).some(v => v && String(v).trim().length > 0);
+  const inferredSetupCompleted = localStored.setupCompleted === true || legacyHasKey === true;
+
   const loaded = cloneSettings({
     language: syncStored.language || localStored.language || DEFAULT_SETTINGS.language,
     tone: syncStored.tone || localStored.tone || DEFAULT_SETTINGS.tone,
     provider: localStored.provider || DEFAULT_SETTINGS.provider,
-    apiKeys: localStored.apiKeys || {}
+    apiKeys: localStored.apiKeys || {},
+    setupCompleted: inferredSetupCompleted
   });
 
   settings = cloneSettings(loaded);
@@ -265,14 +275,19 @@ async function saveSettings(newSettings) {
 
   const nextSettings = cloneSettings({ ...settings, ...newSettings });
 
+  // Sticky setupCompleted: once true, stays true. Becomes true the first
+  // time the user saves with a non-empty key for the chosen provider.
+  const providerKeyPresent = !!(nextSettings.apiKeys?.[nextSettings.provider] || '').trim();
+  nextSettings.setupCompleted = persistedSettings.setupCompleted === true || providerKeyPresent;
+
   try {
-    const { language, tone, provider, apiKeys } = nextSettings;
+    const { language, tone, provider, apiKeys, setupCompleted } = nextSettings;
 
     // Preferences → sync storage (cross-device)
     await storageSet(chrome.storage.sync, { language, tone });
 
-    // Provider + API keys → local storage only (security)
-    await storageSet(chrome.storage.local, { provider, apiKeys });
+    // Provider + API keys + setupCompleted → local storage only (security)
+    await storageSet(chrome.storage.local, { provider, apiKeys, setupCompleted });
 
     settings = cloneSettings(nextSettings);
     persistedSettings = cloneSettings(nextSettings);
@@ -283,8 +298,8 @@ async function saveSettings(newSettings) {
 
     // Fallback: save everything to local
     try {
-      const { language, tone, provider, apiKeys } = nextSettings;
-      await storageSet(chrome.storage.local, { language, tone, provider, apiKeys });
+      const { language, tone, provider, apiKeys, setupCompleted } = nextSettings;
+      await storageSet(chrome.storage.local, { language, tone, provider, apiKeys, setupCompleted });
       settings = cloneSettings(nextSettings);
       persistedSettings = cloneSettings(nextSettings);
       return { success: true, fallback: true };
@@ -572,7 +587,11 @@ function setupEventListeners() {
       settings = cloneSettings(persistedSettings);
       draftApiKeys = {}; // Reset draft on each open
       updateSettingsUI();
-      document.getElementById('welcome-notice')?.classList.add('hidden');
+      // Hide welcome notice only for users who have already finished setup —
+      // otherwise the gear click would dismiss the very nudge that should still help them.
+      if (persistedSettings.setupCompleted) {
+        document.getElementById('welcome-notice')?.classList.add('hidden');
+      }
       showScreen('settings');
     });
   }
@@ -968,10 +987,11 @@ async function init() {
   setupEventListeners();
   showScreen('result');
 
-  // First-run check: if no API key for current provider → open Settings with welcome notice
-  const hasKey = !!(settings.apiKeys[settings.provider]);
-  if (!hasKey) {
-    console.log('[ExplainIt] No API key found — opening Settings for first-run setup');
+  // First-run check: drive off setupCompleted (not just apiKeys[provider]) so that a
+  // half-finished setup (e.g. user pasted a key then got a 'quota' error and walked away)
+  // still gets the welcome nudge on next popup open.
+  if (!settings.setupCompleted) {
+    console.log('[ExplainIt] Setup not completed — opening Settings for first-run');
     document.getElementById('welcome-notice')?.classList.remove('hidden');
     showScreen('settings');
     return;

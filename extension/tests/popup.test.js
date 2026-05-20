@@ -385,4 +385,70 @@ describe('loadSettings: fallback behavior when sync is unavailable', () => {
     expect(checked?.value).toBe('groq');
     expect(document.getElementById('api-key-input').value).toBe('gsk-local');
   });
+
+// ─── setupCompleted flag (welcome-notice gate, sticky persistence) ───────────
+
+describe('setupCompleted: drives first-run gate, sticky once true', () => {
+  beforeEach(() => {
+    mockSyncSet.mockClear();
+    mockLocalSet.mockClear();
+    mockSyncSet.mockResolvedValue(undefined);
+    mockLocalSet.mockResolvedValue(undefined);
+  });
+
+  test('saveSettings with a non-empty key for chosen provider writes setupCompleted=true to LOCAL', async () => {
+    await saveSettings({
+      language: 'en',
+      tone: 'simple',
+      provider: 'groq',
+      apiKeys: { groq: 'gsk_real-looking-key' }
+    });
+
+    expect(mockLocalSet).toHaveBeenCalledWith(
+      expect.objectContaining({ setupCompleted: true })
+    );
+    // Must NOT be in sync (preferences only — sync is cross-device, setupCompleted is per-install)
+    const syncCalls = JSON.stringify(mockSyncSet.mock.calls.flat());
+    expect(syncCalls).not.toContain('setupCompleted');
+  });
+
+  test('saveSettings WITHOUT a key for chosen provider does not flip setupCompleted from false to true', async () => {
+    // Fresh state — persistedSettings.setupCompleted is false
+    mockSyncGet.mockResolvedValue({});
+    mockLocalGet.mockResolvedValue({}); // no apiKeys → no legacy migration → starts false
+    await loadSettings();
+
+    mockLocalSet.mockClear();
+    await saveSettings({
+      language: 'en', tone: 'simple', provider: 'groq', apiKeys: {} // no key
+    });
+
+    const localCall = mockLocalSet.mock.calls.find(([arg]) => arg && 'setupCompleted' in arg);
+    expect(localCall?.[0]?.setupCompleted).toBe(false);
+  });
+
+  test('legacy migration: existing user with saved key on update gets setupCompleted=true inferred', async () => {
+    // Pre-2.0.2 install: has an OpenAI key but no setupCompleted field in storage
+    mockLocalGet.mockResolvedValue({
+      provider: 'openai',
+      apiKeys: { openai: 'sk-pre-existing' }
+      // setupCompleted is undefined
+    });
+    mockSyncGet.mockResolvedValue({ language: 'en', tone: 'simple' });
+
+    await loadSettings();
+
+    // After loadSettings, a save (e.g. user just opening Settings and saving) should
+    // persist setupCompleted=true so the welcome notice doesn't ambush them.
+    mockLocalSet.mockClear();
+    await saveSettings({
+      language: 'en', tone: 'simple', provider: 'openai',
+      apiKeys: { openai: 'sk-pre-existing' }
+    });
+
+    expect(mockLocalSet).toHaveBeenCalledWith(
+      expect.objectContaining({ setupCompleted: true })
+    );
+  });
+});
 });
