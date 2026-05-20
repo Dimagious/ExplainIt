@@ -1,53 +1,51 @@
-🔍 ExplainIt! — Instant AI Explanations for Any Selected Text
+Stuck on a sentence? Highlight it, click ExplainIt, and get a plain-English explanation in seconds — without leaving the page.
 
-ExplainIt! helps you understand complex text on any webpage. Select text, click the icon, and get a clear explanation in seconds.
+Built for students, non-native English readers, and anyone reading outside their field: contracts, papers, news, docs, Reddit threads, Stack Overflow.
 
-✨ KEY FEATURES
+Free to use with Groq (Llama 3.3 70B) — no credit card. Bring your own key for OpenAI, Gemini, or Claude if you prefer.
 
-🚀 One-Click Explanations
-• Select text on any page
-• Click the floating ExplainIt icon
-• Get an explanation instantly
+✨ HOW IT WORKS
 
-🤖 Multi-Provider AI Support
-• OpenAI (GPT-4o mini)
-• Anthropic (Claude Haiku)
-• Google Gemini (Gemini Flash)
-• Groq (Llama 3.3 70B)
+1. Highlight any text on any webpage
+2. Click the floating ExplainIt icon
+3. Read the explanation in a popup right next to your selection
 
-🔑 Bring Your Own API Key
-• Choose your preferred provider
-• Add your own API key in settings
-• API keys are stored locally in your browser extension storage
+🎯 THREE EXPLANATION DEPTHS
 
-🎯 Flexible Explanation Style
-• Simple Words
-• Like I'm 5
-• Expert Level
+• Simple words — clear plain English for any adult
+• Like I'm 5 — short sentences, no jargon, friendly analogies
+• Expert — preserves technical terms and key nuance
 
-🌍 Language Support
+🌍 EXPLAINS IN YOUR LANGUAGE
+
 • English
-• Russian
+• Русский (Russian)
 
-💎 Practical UX
-• Inline popup near selected text
-• Retry and copy-to-clipboard actions
-• Fast settings access
+Reads English source content. Explains in the language you actually think in.
 
-🔒 PRIVACY NOTES
+🤖 BRING-YOUR-OWN-PROVIDER
 
+• Groq (Llama 3.3 70B) — Recommended, free tier, no card
+• Google Gemini Flash
+• OpenAI GPT-4o mini
+• Anthropic Claude Haiku
+
+Pick any one. Switch any time. Pay only for what you use.
+
+🔒 PRIVACY
+
+• API keys are stored locally on your device — never synced, never sent anywhere except the provider you chose
 • Only text you explicitly select is processed
-• No browsing history collection
-• No analytics tracking in extension code
-• Selected text is sent only to your chosen AI provider
+• No browsing history collection, no analytics tracking
+• No account, no signup, no email required
 
 🎓 GREAT FOR
 
-• Students
-• Non-native readers
-• Professionals learning unfamiliar topics
-• Anyone who wants faster comprehension
+• Non-native English readers consuming English content
+• Students reading dense academic material
+• Professionals working through legal contracts, medical reports, or technical docs
+• Anyone who wants to understand a sentence without losing their place on the page
 
 ---
 
-Select text. Click once. Understand faster.
+Highlight. Click. Understand.
