@@ -30,6 +30,16 @@
   --color-success: #10B981;
   --color-error: #EF4444;
   --color-warning: #F59E0B;
+
+  /* Success-state palette (used by Ready badge in empty-state) */
+  --color-success-bg: rgba(16, 185, 129, 0.12);
+  --color-success-border: rgba(16, 185, 129, 0.3);
+  --color-success-text: #065F46;
+
+  /* Selection / marker highlight (used in empty-state illustration) */
+  --color-marker: #BFDBFE;
+  --color-marker-line: rgba(37, 99, 235, 0.4);
+  --color-marker-ink: #0F172A;
   
   /* Spacing */
   --spacing-xs: 4px;
