@@ -159,11 +159,14 @@ async function callAnthropic(apiKey, model, prompt, requestOptions = {}) {
 async function callGemini(apiKey, model, prompt, requestOptions = {}) {
   const maxTokens = requestOptions.maxTokens ?? 500;
   const temperature = requestOptions.temperature ?? 0.7;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   const response = await fetchWithTimeout(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey
+    },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { maxOutputTokens: maxTokens, temperature }

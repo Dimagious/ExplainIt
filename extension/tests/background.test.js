@@ -198,12 +198,13 @@ describe('callGemini', () => {
     candidates: [{ content: { parts: [{ text: 'Gemini explanation' }] } }]
   };
 
-  test('puts API key in URL query param — NOT in any header', async () => {
+  test('sends API key via x-goog-api-key header — NOT in URL query', async () => {
     mockFetchOk(okResponse);
     await callGemini(key, model, 'test prompt');
 
     const [url, opts] = global.fetch.mock.calls[0];
-    expect(url).toContain(`key=${key}`);
+    expect(url).not.toContain(`key=${key}`);
+    expect(opts.headers['x-goog-api-key']).toBe(key);
     expect(opts.headers['Authorization']).toBeUndefined();
     expect(opts.headers['x-api-key']).toBeUndefined();
   });
@@ -273,13 +274,14 @@ describe('callProvider: routing to correct API format', () => {
     expect(opts.headers['Authorization']).toBeUndefined();
   });
 
-  test('gemini → puts key in URL, NOT in any header', async () => {
+  test('gemini → puts key in x-goog-api-key header, NOT in URL', async () => {
     mockFetchOk({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] });
     await callProvider('gemini', 'AIzaKey', 'text', 'simple', 'en');
 
     const [url, opts] = global.fetch.mock.calls[0];
     expect(url).toContain('googleapis.com');
-    expect(url).toContain('key=AIzaKey');
+    expect(url).not.toContain('AIzaKey');
+    expect(opts.headers['x-goog-api-key']).toBe('AIzaKey');
     expect(opts.headers['Authorization']).toBeUndefined();
   });
 
