@@ -6,6 +6,8 @@
 
 ### Read English content in your own language.
 
+#### 13 languages. 3 tones. Free with Groq.
+
 Highlight any sentence on the web. Click once. Get a plain-English (or plain-Russian) explanation right next to your selection — in seconds, without leaving the page.
 
 <a href="https://chromewebstore.google.com/detail/explainit/hpohkpfddcgchmapdnncddilkgiobabb">
@@ -77,7 +79,7 @@ ExplainIt is a fourth option: **select a sentence, click once, read the explanat
 ## What you get
 
 - 🆓 **Free tier with Groq** — no credit card, no signup beyond the key
-- 🌍 **Explains in your language** — English & Russian today, 10+ more in 2.1.0 ([roadmap](#roadmap))
+- 🌍 **Explains in 13 languages** — English, Russian, Spanish, Chinese, Hindi, Arabic, Portuguese, German, French, Japanese, Korean, Turkish, Vietnamese ([details](#languages))
 - 🎯 **Three tones** — *Simple* · *Like I'm 5* · *Expert* — same idea, different depth
 - ⚡ **Fast** — under 2 seconds per explanation with Groq's Llama 3.3 70B
 - 🔒 **Privacy by design** — your API key never leaves your device
@@ -123,15 +125,13 @@ Costs above are based on each provider's published per-token pricing × the size
 
 ## Languages
 
-Available today:
+All 13 languages live in the dropdown today:
 
-🇬🇧 **English** · 🇷🇺 **Русский**
+🇬🇧 English · 🇷🇺 Русский · 🇪🇸 Español · 🇨🇳 中文 · 🇮🇳 हिन्दी · 🇸🇦 العربية · 🇵🇹 Português · 🇩🇪 Deutsch · 🇫🇷 Français · 🇯🇵 日本語 · 🇰🇷 한국어 · 🇹🇷 Türkçe · 🇻🇳 Tiếng Việt
 
-Shipping in 2.1.0:
+English and Russian use hand-tuned native prompt templates. The other 11 reach the model via an English meta-prompt with a target-language steer ("Output ONLY in *X*") — the same pattern most production multilingual apps use. Arabic output renders right-to-left automatically.
 
-🇪🇸 Español · 🇨🇳 中文 · 🇩🇪 Deutsch · 🇫🇷 Français · 🇵🇹 Português · 🇯🇵 日本語 · 🇰🇷 한국어 · 🇮🇳 हिन्दी · 🇸🇦 العربية · 🇹🇷 Türkçe · 🇻🇳 Tiếng Việt
-
-Languages get added as we validate the AI output quality for each — we'd rather ship fewer languages well than 30 languages with shaky Hindi.
+If you hit a language where the output quality feels off, [open an issue](https://github.com/Dimagious/ExplainIt/issues) — we'd rather migrate that language to a native template than ship something shaky.
 
 ---
 
@@ -146,8 +146,8 @@ Languages get added as we validate the AI output quality for each — we'd rathe
 
 ## Roadmap
 
-- ✅ **2.0.2 (current)** — Free Groq default · optional host permissions · branched empty-state · typed error UI · new visual identity
-- 🔜 **2.1.0** — Multi-language output: 12+ languages
+- ✅ **2.1.0 (current)** — Multi-language output: 13 languages with RTL support for Arabic
+- ✅ **2.0.2** — Free Groq default · optional host permissions · branched empty-state · typed error UI · new visual identity
 - 🔮 **2.2.0** — Saved explanations history · vocab notebook · per-page learning streaks
 
 ---
