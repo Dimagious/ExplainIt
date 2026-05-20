@@ -12,7 +12,7 @@ let currentState = 'empty';
 const DEFAULT_SETTINGS = {
   language: 'en',
   tone: 'simple',
-  provider: 'openai',
+  provider: 'groq',
   apiKeys: {}   // { openai: '...', anthropic: '...', gemini: '...', groq: '...' }
 };
 

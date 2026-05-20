@@ -186,7 +186,7 @@ async function callGemini(apiKey, model, prompt, requestOptions = {}) {
  * Dispatch to the correct provider caller
  */
 async function callProvider(providerId, apiKey, text, tone, language, requestOptions = {}) {
-  const providerCfg = PROVIDER_CONFIGS[providerId] || PROVIDER_CONFIGS.openai;
+  const providerCfg = PROVIDER_CONFIGS[providerId] || PROVIDER_CONFIGS.groq;
   const prompt = buildPrompt(text, tone, language);
 
   switch (providerCfg.type) {
@@ -204,7 +204,7 @@ async function validateApiKey(providerId, apiKey) {
     throw new Error('API key is required');
   }
 
-  const providerCfg = PROVIDER_CONFIGS[providerId] || PROVIDER_CONFIGS.openai;
+  const providerCfg = PROVIDER_CONFIGS[providerId] || PROVIDER_CONFIGS.groq;
   const pingPrompt = 'Respond with exactly: OK';
   const requestOptions = { maxTokens: 24, temperature: 0 };
 
@@ -289,7 +289,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const { text, tone, language } = message;
 
     chrome.storage.local.get(['provider', 'apiKeys'], (stored) => {
-      const providerId = stored.provider || 'openai';
+      const providerId = stored.provider || 'groq';
       const apiKeys = stored.apiKeys || {};
       const apiKey = apiKeys[providerId] || '';
 
@@ -310,7 +310,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'VALIDATE_API_KEY') {
-    const providerId = message.provider || 'openai';
+    const providerId = message.provider || 'groq';
     const apiKey = (message.apiKey || '').trim();
 
     if (!apiKey) {

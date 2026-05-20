@@ -348,10 +348,10 @@ describe('loadSettings: default values when storage is empty', () => {
     expect(select.value).toBe('simple');
   });
 
-  test('defaults to openai provider', async () => {
+  test('defaults to groq provider (free tier, no card)', async () => {
     await loadSettings();
     const radio = document.querySelector('input[name="provider"]:checked');
-    expect(radio?.value).toBe('openai');
+    expect(radio?.value).toBe('groq');
   });
 });
 

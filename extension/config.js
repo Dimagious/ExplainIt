@@ -107,7 +107,7 @@ function getPrompt(tone, language, text) {
  * @returns {object} Provider configuration
  */
 function getProvider(providerId) {
-  return PROVIDERS[providerId] || PROVIDERS.openai;
+  return PROVIDERS[providerId] || PROVIDERS.groq;
 }
 
 /**

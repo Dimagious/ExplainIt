@@ -10,12 +10,12 @@ let inlinePopup = null;
 let popupShadowRoot = null;
 let retryCount = 0;
 let currentText = null;
-let currentSettings = { language: 'en', tone: 'simple', provider: 'openai', apiKeys: {} };
+let currentSettings = { language: 'en', tone: 'simple', provider: 'groq', apiKeys: {} };
 
 const INLINE_DEFAULT_SETTINGS = {
   language: 'en',
   tone: 'simple',
-  provider: 'openai',
+  provider: 'groq',
   apiKeys: {}
 };
 
@@ -1001,7 +1001,7 @@ async function fetchExplanation(text) {
     }
     
     // Use current settings (already loaded)
-    const provider = currentSettings.provider || 'openai';
+    const provider = currentSettings.provider || 'groq';
     const language = currentSettings.language || 'en';
     const tone = currentSettings.tone || 'simple';
     
@@ -1056,7 +1056,7 @@ function showResult(originalText, explanation, provider, language, tone) {
     anthropic: 'Anthropic',
     gemini: 'Gemini',
     groq: 'Groq'
-  })[provider] || 'OpenAI';
+  })[provider] || 'Groq';
   const toneLabels = {
     simple: 'Simple',
     kid: 'Kid-friendly',
