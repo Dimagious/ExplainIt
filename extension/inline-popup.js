@@ -1137,15 +1137,17 @@ function showResult(originalText, explanation, provider, language, tone) {
   
   const originalTextDiv = document.createElement('div');
   originalTextDiv.className = 'original-text';
+  originalTextDiv.setAttribute('dir', 'auto'); // RTL support: browser detects from content
   originalTextDiv.textContent = originalText; // SAFE: textContent prevents XSS
-  
+
   // Explanation section
   const explanationTitle = document.createElement('div');
   explanationTitle.className = 'section-title';
   explanationTitle.textContent = 'Explanation';
-  
+
   const explanationDiv = document.createElement('div');
   explanationDiv.className = 'explanation';
+  explanationDiv.setAttribute('dir', 'auto'); // RTL support for Arabic/Hebrew output
   explanationDiv.textContent = explanation; // SAFE: textContent prevents XSS
   
   // Append all elements
