@@ -23,24 +23,34 @@ const INLINE_PROVIDER_META = {
   openai: {
     name: 'OpenAI',
     placeholder: 'sk-...',
-    keyUrl: 'https://platform.openai.com/api-keys'
+    keyUrl: 'https://platform.openai.com/api-keys',
+    keyPrefix: 'sk-'
   },
   anthropic: {
     name: 'Anthropic',
     placeholder: 'sk-ant-...',
-    keyUrl: 'https://console.anthropic.com/settings/keys'
+    keyUrl: 'https://console.anthropic.com/settings/keys',
+    keyPrefix: 'sk-ant-'
   },
   gemini: {
     name: 'Google',
     placeholder: 'AIza...',
-    keyUrl: 'https://aistudio.google.com/app/apikey'
+    keyUrl: 'https://aistudio.google.com/app/apikey',
+    keyPrefix: 'AIza'
   },
   groq: {
     name: 'Groq',
     placeholder: 'gsk_...',
-    keyUrl: 'https://console.groq.com/keys'
+    keyUrl: 'https://console.groq.com/keys',
+    keyPrefix: 'gsk_'
   }
 };
+
+function isInlineValidKeyPrefix(provider, keyValue) {
+  const prefix = INLINE_PROVIDER_META[provider]?.keyPrefix;
+  if (!prefix || !keyValue) return true;
+  return keyValue.startsWith(prefix);
+}
 
 // Inline-popup mirror of popup.js KIND_TO_KEY_COPY — kept inline because
 // content scripts cannot importScripts. Stays in sync with popup.js by convention.
@@ -880,6 +890,14 @@ function createInlinePopup(selectedText, options = {}) {
         const apiKey = keyInput?.value?.trim() || '';
         if (!apiKey) {
           setInlineKeyStatus(activeProvider, 'not-set');
+          return;
+        }
+
+        // Client-side prefix sanity check.
+        if (!isInlineValidKeyPrefix(activeProvider, apiKey)) {
+          const expected = INLINE_PROVIDER_META[activeProvider]?.keyPrefix || '';
+          const providerName = INLINE_PROVIDER_META[activeProvider]?.name || activeProvider;
+          setInlineKeyStatus(activeProvider, 'invalid', `Wrong format. Expected key starting with "${expected}" for ${providerName}.`);
           return;
         }
 

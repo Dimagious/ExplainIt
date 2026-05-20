@@ -40,10 +40,10 @@ let abortController = null;
 // ─── Provider metadata (mirrors config.js PROVIDERS) ─────────────────────────
 
 const PROVIDER_META = {
-  openai:    { name: 'OpenAI',    keyUrl: 'https://platform.openai.com/api-keys',        placeholder: 'sk-...' },
-  anthropic: { name: 'Anthropic', keyUrl: 'https://console.anthropic.com/settings/keys', placeholder: 'sk-ant-...' },
-  gemini:    { name: 'Google',    keyUrl: 'https://aistudio.google.com/app/apikey',       placeholder: 'AIza...' },
-  groq:      { name: 'Groq',      keyUrl: 'https://console.groq.com/keys',               placeholder: 'gsk_...' }
+  openai:    { name: 'OpenAI',    keyUrl: 'https://platform.openai.com/api-keys',         placeholder: 'sk-...',     keyPrefix: 'sk-' },
+  anthropic: { name: 'Anthropic', keyUrl: 'https://console.anthropic.com/settings/keys',  placeholder: 'sk-ant-...', keyPrefix: 'sk-ant-' },
+  gemini:    { name: 'Google',    keyUrl: 'https://aistudio.google.com/app/apikey',        placeholder: 'AIza...',    keyPrefix: 'AIza' },
+  groq:      { name: 'Groq',      keyUrl: 'https://console.groq.com/keys',                placeholder: 'gsk_...',    keyPrefix: 'gsk_' }
 };
 
 // Host permissions per provider (matches optional_host_permissions in manifest)
@@ -53,6 +53,13 @@ const PROVIDER_HOSTS = {
   gemini:    'https://generativelanguage.googleapis.com/*',
   groq:      'https://api.groq.com/*'
 };
+
+function isValidKeyPrefix(provider, keyValue) {
+  const prefix = PROVIDER_META[provider]?.keyPrefix;
+  if (!prefix) return true;
+  if (!keyValue) return true; // empty is handled by 'not-set'
+  return keyValue.startsWith(prefix);
+}
 
 /**
  * Ensure the user has granted host permission for this provider's API.
@@ -642,9 +649,22 @@ function setupEventListeners() {
       const provider = settings.provider;
       const keyValue = apiKeyInput.value.trim();
       draftApiKeys[provider] = keyValue;
-      setKeyStatus(provider, inferKeyStatusFromValue(keyValue));
+
+      // Client-side prefix sanity check — surfaces "wrong-provider key" silently
+      // before the user wastes a roundtrip on Test key.
+      if (keyValue && !isValidKeyPrefix(provider, keyValue)) {
+        const expectedPrefix = PROVIDER_META[provider]?.keyPrefix || '';
+        setKeyStatus(
+          provider,
+          'invalid',
+          `Wrong format|Expected key starting with "${expectedPrefix}" for ${PROVIDER_META[provider]?.name || provider}. Did you pick the wrong provider?`
+        );
+      } else {
+        setKeyStatus(provider, inferKeyStatusFromValue(keyValue));
+      }
+
       if (testKeyBtn) {
-        testKeyBtn.disabled = !keyValue;
+        testKeyBtn.disabled = !keyValue || !isValidKeyPrefix(provider, keyValue);
       }
     });
   }
