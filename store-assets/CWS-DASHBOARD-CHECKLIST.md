@@ -6,9 +6,18 @@ they cannot be automated from the repo.
 
 ## Required before publishing the next version
 
-1. **Category:** change from **Education** → **Productivity**.
-   - Reason: the closest direct competitor (Explain AI, 2K users 4.6★)
-     sits in Productivity; that is where the comparison shopping happens.
+1. **Category:** change from **Education** → **Tools** (under the Productivity group).
+   - Chrome Web Store no longer offers "Productivity" as a leaf
+     category. The Productivity group now contains 5 children:
+     Communication, Developer Tools, Education, Tools, Workflow &
+     Planning. Only Education and Tools are realistic for ExplainIt.
+   - "Tools" is the right pick because ExplainIt is a utility a user
+     reaches for mid-reading, not structured learning material. Most
+     direct AI-explain competitors (Explain AI, Simplify, ChatGPT
+     Summary) sit in the utility bucket, not under Education.
+   - Education stays viable if you want to target the student segment
+     specifically — note that the full description already lists
+     students as one of four audiences, not the primary.
 
 2. **Listing locale:** add **Russian (ru-RU)** in addition to English.
    - Reason: the extension explicitly supports Russian output. With an
