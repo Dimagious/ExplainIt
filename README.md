@@ -18,8 +18,12 @@ Highlight any sentence on the web. Click once. Get a plain-English (or plain-Rus
 
 <br/><br/>
 
-<!-- TODO: capture docs/marketing/hero.gif (≤ 5 MB, ~800px wide, 6-8s loop). See docs/marketing/ASSETS.md -->
-<img src="docs/marketing/hero.gif" alt="ExplainIt demo: highlight a sentence, click the floating bubble, read the explanation in seconds" width="800" />
+<!--
+  Hero: showing the static "Highlight. Click. Understand." composition.
+  Swap to docs/marketing/hero.gif once the animated GIF is captured —
+  see docs/marketing/hero-animation/README.md for the recording steps.
+-->
+<img src="docs/marketing/screenshot-1-hero.png" alt="ExplainIt: highlight a sentence on the web, click the floating Aa bubble, get a plain-English explanation in seconds" width="800" />
 
 </div>
 
@@ -44,28 +48,24 @@ ExplainIt is a fourth option: **select a sentence, click once, read the explanat
 <table>
   <tr>
     <td width="50%" align="center">
-      <!-- TODO: docs/marketing/screenshot-en-result.png -->
-      <img src="docs/marketing/screenshot-en-result.png" alt="English explanation of a dense Bloomberg sentence" />
+      <img src="docs/marketing/screenshot-2-en-result.png" alt="English explanation of a dense Bloomberg sentence" />
       <br/>
       <sub><b>Dense → plain.</b> Bloomberg, arXiv, Stack Overflow.</sub>
     </td>
     <td width="50%" align="center">
-      <!-- TODO: docs/marketing/screenshot-ru-result.png -->
-      <img src="docs/marketing/screenshot-ru-result.png" alt="Russian explanation of an English sentence" />
+      <img src="docs/marketing/screenshot-3-ru-result.png" alt="Russian explanation of an English sentence" />
       <br/>
       <sub><b>English source → Russian explanation.</b> One click, same page.</sub>
     </td>
   </tr>
   <tr>
     <td width="50%" align="center">
-      <!-- TODO: docs/marketing/screenshot-tone-compare.png -->
-      <img src="docs/marketing/screenshot-tone-compare.png" alt="Three explanation tones: Simple, Like I'm 5, Expert" />
+      <img src="docs/marketing/screenshot-4-tone-compare.png" alt="Three explanation tones: Simple, Like I'm 5, Expert" />
       <br/>
       <sub><b>Three depths.</b> Simple · Like I'm 5 · Expert. Switch in one click.</sub>
     </td>
     <td width="50%" align="center">
-      <!-- TODO: docs/marketing/screenshot-settings.png -->
-      <img src="docs/marketing/screenshot-settings.png" alt="Settings panel — Groq selected with Free · No card badge" />
+      <img src="docs/marketing/screenshot-5-free-setup.png" alt="Settings panel — Groq selected with Free · No card badge" />
       <br/>
       <sub><b>Free to start.</b> Bring your own key when you outgrow it.</sub>
     </td>

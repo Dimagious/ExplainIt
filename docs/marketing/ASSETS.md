@@ -1,189 +1,90 @@
-# Marketing assets — capture brief
+# Marketing assets — status
 
-The README references 5 visual assets in this folder. Until they are
-captured, those `<img>` tags render as broken icons on the GitHub page.
-This file is the brief for capturing each one.
+The README hero block and the 2×2 product grid reference 5 PNG
+screenshots and 1 animated GIF. Status as of v2.0.2:
 
-**Same screenshots can double as Chrome Web Store listing slots** — see
-`store-assets/screenshots/SHOT-LIST.md`. The GIF is README-only (CWS
-does not accept GIFs).
+| Asset | Status | Source |
+|---|---|---|
+| `screenshot-1-hero.png` | ✅ Delivered | Design-AI round 2 |
+| `screenshot-2-en-result.png` | ✅ Delivered | Design-AI round 2 |
+| `screenshot-3-ru-result.png` | ✅ Delivered | Design-AI round 2 |
+| `screenshot-4-tone-compare.png` | ✅ Delivered | Design-AI round 2 |
+| `screenshot-5-free-setup.png` | ✅ Delivered | Design-AI round 2 |
+| `hero.gif` | ⏳ TODO — must be captured locally | See below |
 
----
+Until `hero.gif` is captured, the README hero block falls back to
+`screenshot-1-hero.png` (the static version of the same composition).
+Page still looks good — the GIF is the cherry on top.
 
-## 1. `hero.gif` — the #1 priority
-
-**The single most impactful element on the README.** One good GIF beats
-five static screenshots for first impression.
-
-### What to capture
-
-A real workflow, 6–8 seconds, looped:
-
-1. Cursor is on a real article (Bloomberg / arXiv / TechCrunch / Hacker News linked content — **not Wikipedia**)
-2. User highlights one sentence containing dense / jargon-heavy language
-3. The floating ExplainIt "Aa" bubble appears next to the selection
-4. User clicks the bubble
-5. Popup opens with a 2–3 sentence explanation
-6. (Optional) Hold the final frame for ~1 second before loop restarts
-
-### Specs
-
-- **Format:** GIF (or animated WebP if you prefer — GitHub renders both inline)
-- **Dimensions:** ~800px wide. Capture at higher res, downsize on export
-- **File size:** **≤ 5 MB** (GitHub may not render preview if larger)
-- **Frame rate:** 15–20 fps is plenty
-- **Loop:** Yes
-- **Colors:** Keep palette tight — fewer colors = smaller file
-
-### Recommended capture tool
-
-- **macOS:** [Kap](https://getkap.co) (free, modern, exports GIF + WebP + MP4) or CleanShot X
-- **Windows:** [ScreenToGif](https://www.screentogif.com) (free, excellent)
-- **Optimization:** [ezgif.com](https://ezgif.com) (web-based) or [gifski](https://gif.ski) (CLI, best quality-per-byte)
-
-### Capture instructions
-
-1. Open the target article in a clean Chrome window (no extension icons in the way)
-2. Set browser zoom to 100% so the popup renders at intended size
-3. Run Kap → record a tight rectangular region covering 80% of the article area
-4. Perform the highlight → click → wait → close sequence in one smooth take
-5. Trim deadweight at start/end so the action begins by frame ~5
-6. Export at 800px width, ≤ 20 fps, optimize through ezgif if file > 5 MB
-7. Save as `docs/marketing/hero.gif`
-
-### Article suggestions (where to find good dense content)
-
-| Source | Why it works |
-|---|---|
-| Bloomberg / FT / WSJ article on monetary policy or earnings | Real dense English, technical jargon, niche audience needs help |
-| arXiv abstract on any ML paper | Maximum jargon density, instantly visible value |
-| Stack Overflow answer with technical terms | Aspirational for the dev audience |
-| US tax form instructions or a contract clause | Universal pain — anyone reading legal text needs this |
-
-**Avoid:** Wikipedia (reads as filler/demo), random blog posts (the dense content needs to be visibly hard).
+The same 5 PNG screenshots also live in `store-assets/screenshots/` and
+will be uploaded to the Chrome Web Store dashboard during submission.
 
 ---
 
-## 2. `screenshot-en-result.png` — English explanation result
+## How to produce `hero.gif`
 
-### Subject
+The design-AI shipped an animated HTML mockup of the hero scene rather
+than a pre-rendered GIF (their sandboxed environment couldn't render a
+6-second @ 800px clip reliably). Source lives at
+[`hero-animation/`](hero-animation/).
 
-A real article (same source as the GIF) with one sentence highlighted
-and the inline popup open showing a clean **English** explanation.
+### Recommended path — record the mockup
 
-### Composition
+1. **Open the animation** in Chrome. Two options:
+   - Double-click `hero-animation/hero-animation.html` (works if your
+     default browser is Chrome).
+   - Or serve it locally so the React+Babel CDN loads cleanly:
+     ```bash
+     cd docs/marketing/hero-animation
+     python3 -m http.server 8000
+     # then open http://localhost:8000/hero-animation.html
+     ```
+2. **Resize the browser** so the animation canvas is ~800px wide.
+   Loop length is ~7 seconds.
+3. **Screen-record one full loop:**
+   - **macOS:** `Cmd+Shift+5` → *Record selected portion* → drag a box
+     around the canvas → record one full loop → save as `.mov`.
+   - **Windows / Linux:** OBS Studio → Sources → Display Capture → crop
+     to the canvas region.
+4. **Convert to GIF** with ffmpeg:
+   ```bash
+   ffmpeg -i input.mov -vf "fps=15,scale=800:-1:flags=lanczos" \
+          -loop 0 docs/marketing/hero.gif
+   ```
+   Target ≤ 5 MB (GitHub's README-preview cap). If the result is bigger:
+   ```bash
+   # Drop fps to 12, or width to 720, or use gifski for tighter compression
+   gifski --fps 15 --width 800 -o docs/marketing/hero.gif frames-*.png
+   ```
+5. **Swap the README hero** from PNG to GIF:
+   In [`README.md`](../../README.md), change
+   `src="docs/marketing/screenshot-1-hero.png"` →
+   `src="docs/marketing/hero.gif"`.
 
-- Browser chrome at the top (~80px), then the article fills the rest
-- Inline popup overlaid at the selection point
-- Slight blur on the surrounding page text (CSS `backdrop-filter: blur(2px)`) to focus attention on the popup — optional but pro
+### Alternative — capture from the live extension
 
-### Specs
-
-- **Format:** PNG
-- **Dimensions:** 1280 × 800 (matches CWS spec — reusable)
-- **File size:** ≤ 1 MB
-
-### On-image annotations (optional)
-
-A small chip in the popup corner: `GPT-4o mini · Simple words` (or
-whatever provider + tone is being shown). No banner needed for README —
-context is in the surrounding `<sub>` caption.
-
----
-
-## 3. `screenshot-ru-result.png` — Russian explanation of English source
-
-### Subject
-
-Same article structure as #2, but the popup shows a fluent **Russian**
-explanation of the highlighted English sentence.
-
-### Why this matters
-
-This is the **killer-feature shot** — proves the multilingual headline
-("Read English content in your own language") with one visual. Russian
-text in the popup against an English source page is the most distinctive
-single image we can show.
-
-### Composition
-
-- Source page on the left half, popup on the right half (slightly larger
-  than in shot #2 — give Russian text room to breathe)
-- Russian text typographically correct: proper kerning, no Latin-styled
-  fallback fonts
-- Status chip in popup: `Groq ⚡ · 🇷🇺 Русский`
-
-### Specs
-
-- **Format:** PNG · 1280 × 800 · ≤ 1 MB
+If you'd rather show the real extension on a real Bloomberg / arXiv page
+(more credible than a mockup), use [Kap](https://getkap.co) on macOS or
+[ScreenToGif](https://www.screentogif.com) on Windows. Same 6–8s loop,
+same dimensions, same ffmpeg conversion at the end.
 
 ---
 
-## 4. `screenshot-tone-compare.png` — three tones, one sentence
+## What's in this folder
 
-### Subject
-
-The same English sentence explained in two different tones, side-by-side
-or stacked.
-
-### Composition options
-
-Two popup cards in one frame, labeled:
-
-- **Top:** "Like I'm 5" — larger type, simpler language, friendly analogy
-- **Bottom:** "Expert" — denser type, preserves technical terms
-
-Or three cards across (Simple / Like I'm 5 / Expert) if you can keep the
-frame readable at 1280 × 800.
-
-### Specs
-
-- **Format:** PNG · 1280 × 800 · ≤ 1 MB
-
----
-
-## 5. `screenshot-settings.png` — Free Groq setup
-
-### Subject
-
-Settings panel with Groq selected, "Free · No card" badge prominently
-visible, the `Validated` green chip showing on the key status.
-
-### Composition
-
-- Settings panel centered in frame
-- Page behind dimmed
-- Groq card subtly elevated / larger than the other three provider cards
-
-### Specs
-
-- **Format:** PNG · 1280 × 800 · ≤ 1 MB
-
----
-
-## Capture session — recommended order
-
-To minimize context switching:
-
-1. **Set up:** clean Chrome window, target article open, extension loaded, Groq key configured + validated
-2. **GIF first** (hardest to retake, captures the whole flow)
-3. **Static EN result** (same scene, just freeze a clean frame)
-4. **Switch language to Russian in Settings**, then capture **static RU result**
-5. **Switch tone to "Like I'm 5"** in Settings, capture explanation, then switch to "Expert", capture again → composite into **tone-compare**
-6. **Capture Settings panel** with Groq highlighted
-
-Total time, with a single article open: ~15–20 minutes of focused work.
-
----
-
-## After capturing
-
-```bash
-git add docs/marketing/
-git commit -m "docs(marketing): add hero GIF and 4 product screenshots"
 ```
-
-No code changes needed — the README already references these exact filenames.
-
-Same images can be uploaded to Chrome Web Store dashboard (except the
-GIF — CWS only takes static PNG).
+docs/marketing/
+├── ASSETS.md                       ← you are here
+├── DESIGN-AI-BRIEF.md              ← round-2 brief sent to design-AI (archived)
+├── screenshot-1-hero.png           ← README hero (also currently used as static fallback)
+├── screenshot-2-en-result.png
+├── screenshot-3-ru-result.png
+├── screenshot-4-tone-compare.png
+├── screenshot-5-free-setup.png
+├── hero.gif                        ← TODO
+└── hero-animation/                 ← source mockup for hero.gif
+    ├── README.md                   (designer's recording notes)
+    ├── hero-animation.html         (open this in Chrome to view)
+    ├── animations.jsx              (React source — reference only)
+    └── icons.jsx                   (icon SVG components — reference only)
+```
