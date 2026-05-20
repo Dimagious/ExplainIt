@@ -701,10 +701,10 @@ function createInlinePopup(selectedText, options = {}) {
             </label>
             <div class="form-description">Choose which provider will generate explanations.</div>
             <select id="inline-provider-select" class="form-select">
-              <option value="openai" ${currentSettings.provider === 'openai' ? 'selected' : ''}>OpenAI (GPT-4o mini)</option>
-              <option value="anthropic" ${currentSettings.provider === 'anthropic' ? 'selected' : ''}>Anthropic (Claude Haiku)</option>
-              <option value="gemini" ${currentSettings.provider === 'gemini' ? 'selected' : ''}>Google Gemini (Flash)</option>
-              <option value="groq" ${currentSettings.provider === 'groq' ? 'selected' : ''}>Groq (Llama 3.3 70B)</option>
+              <option value="groq" ${currentSettings.provider === 'groq' ? 'selected' : ''}>Groq — Llama 3.3 70B (Free, no card)</option>
+              <option value="gemini" ${currentSettings.provider === 'gemini' ? 'selected' : ''}>Google Gemini Flash</option>
+              <option value="openai" ${currentSettings.provider === 'openai' ? 'selected' : ''}>OpenAI GPT-4o mini</option>
+              <option value="anthropic" ${currentSettings.provider === 'anthropic' ? 'selected' : ''}>Anthropic Claude Haiku</option>
             </select>
           </div>
           <div class="form-group">

@@ -156,6 +156,21 @@
               AI Provider
             </label>
             <div class="provider-grid" id="provider-grid" role="radiogroup" aria-label="AI provider">
+              <label class="provider-card" data-provider="groq">
+                <input type="radio" name="provider" value="groq" />
+                <div class="provider-card-inner">
+                  <span class="provider-name">Groq ⚡</span>
+                  <span class="provider-model">Llama 3.3 70B</span>
+                  <span class="provider-badge">Free · No card</span>
+                </div>
+              </label>
+              <label class="provider-card" data-provider="gemini">
+                <input type="radio" name="provider" value="gemini" />
+                <div class="provider-card-inner">
+                  <span class="provider-name">Google</span>
+                  <span class="provider-model">Gemini Flash</span>
+                </div>
+              </label>
               <label class="provider-card" data-provider="openai">
                 <input type="radio" name="provider" value="openai" />
                 <div class="provider-card-inner">
@@ -168,21 +183,6 @@
                 <div class="provider-card-inner">
                   <span class="provider-name">Anthropic</span>
                   <span class="provider-model">Claude Haiku</span>
-                </div>
-              </label>
-              <label class="provider-card" data-provider="gemini">
-                <input type="radio" name="provider" value="gemini" />
-                <div class="provider-card-inner">
-                  <span class="provider-name">Google</span>
-                  <span class="provider-model">Gemini Flash</span>
-                </div>
-              </label>
-              <label class="provider-card" data-provider="groq">
-                <input type="radio" name="provider" value="groq" />
-                <div class="provider-card-inner">
-                  <span class="provider-name">Groq ⚡</span>
-                  <span class="provider-model">Llama 3.3 70B</span>
-                  <span class="provider-badge">Free tier</span>
                 </div>
               </label>
             </div>
