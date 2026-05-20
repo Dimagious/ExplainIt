@@ -147,6 +147,14 @@ describe('callAnthropic', () => {
     expect(opts.headers['anthropic-version']).toBeTruthy();
   });
 
+  test('sends anthropic-dangerous-direct-browser-access header (required for browser-origin calls)', async () => {
+    mockFetchOk(okResponse);
+    await callAnthropic(key, model, 'test');
+
+    const [, opts] = global.fetch.mock.calls[0];
+    expect(opts.headers['anthropic-dangerous-direct-browser-access']).toBe('true');
+  });
+
   test('calls api.anthropic.com, not openai.com', async () => {
     mockFetchOk(okResponse);
     await callAnthropic(key, model, 'test');
