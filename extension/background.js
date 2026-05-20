@@ -83,6 +83,49 @@ async function fetchWithTimeout(url, options = {}) {
   }
 }
 
+/**
+ * Classify a provider/network error into a stable `kind` for UI copy.
+ * Status-first; falls back to message keywords. Returns one of:
+ *   'auth' | 'quota' | 'rate_limit' | 'cors' | 'permission' | 'network' | 'server' | 'unknown'
+ */
+function classifyError(err) {
+  const status = err && typeof err.status === 'number' ? err.status : 0;
+  const msg = ((err && err.message) || '').toLowerCase();
+
+  if (status === 401 || msg.includes('unauthorized') ||
+      msg.includes('invalid api key') || msg.includes('incorrect api key') ||
+      msg.includes('api key not valid')) {
+    return 'auth';
+  }
+  // Quota check BEFORE rate_limit: OpenAI returns HTTP 429 with body
+  // "insufficient_quota" when a paid account has no credit — that's a billing
+  // problem, not a real rate-limit. Telling the user to "wait a minute" would
+  // be wrong; we want them to top up or switch to Groq.
+  if (status === 402 || status === 403 ||
+      msg.includes('quota') || msg.includes('insufficient_quota') ||
+      msg.includes('credit') || msg.includes('billing') || msg.includes('exceeded')) {
+    return 'quota';
+  }
+  if (status === 429 || msg.includes('rate limit') || msg.includes('too many requests')) {
+    return 'rate_limit';
+  }
+  if (msg.includes('cors') || msg.includes('dangerous-direct-browser')) {
+    return 'cors';
+  }
+  if (msg.includes('failed to fetch') || msg.includes('networkerror')) {
+    // Likely missing host permission OR offline; the popup layer can disambiguate
+    // via chrome.permissions.contains. Default to 'network' here.
+    return 'network';
+  }
+  if (msg.includes('timed out') || msg.includes('timeout') || msg.includes('network')) {
+    return 'network';
+  }
+  if (status >= 500) {
+    return 'server';
+  }
+  return 'unknown';
+}
+
 // ─── Provider-specific API callers ───────────────────────────────────────────
 
 /**
@@ -130,7 +173,8 @@ async function callAnthropic(apiKey, model, prompt, requestOptions = {}) {
     headers: {
       'Content-Type': 'application/json',
       'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01'
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
     },
     body: JSON.stringify({
       model,
@@ -158,11 +202,14 @@ async function callAnthropic(apiKey, model, prompt, requestOptions = {}) {
 async function callGemini(apiKey, model, prompt, requestOptions = {}) {
   const maxTokens = requestOptions.maxTokens ?? 500;
   const temperature = requestOptions.temperature ?? 0.7;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   const response = await fetchWithTimeout(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey
+    },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { maxOutputTokens: maxTokens, temperature }
@@ -186,7 +233,7 @@ async function callGemini(apiKey, model, prompt, requestOptions = {}) {
  * Dispatch to the correct provider caller
  */
 async function callProvider(providerId, apiKey, text, tone, language, requestOptions = {}) {
-  const providerCfg = PROVIDER_CONFIGS[providerId] || PROVIDER_CONFIGS.openai;
+  const providerCfg = PROVIDER_CONFIGS[providerId] || PROVIDER_CONFIGS.groq;
   const prompt = buildPrompt(text, tone, language);
 
   switch (providerCfg.type) {
@@ -204,7 +251,7 @@ async function validateApiKey(providerId, apiKey) {
     throw new Error('API key is required');
   }
 
-  const providerCfg = PROVIDER_CONFIGS[providerId] || PROVIDER_CONFIGS.openai;
+  const providerCfg = PROVIDER_CONFIGS[providerId] || PROVIDER_CONFIGS.groq;
   const pingPrompt = 'Respond with exactly: OK';
   const requestOptions = { maxTokens: 24, temperature: 0 };
 
@@ -258,6 +305,7 @@ async function fetchExplanationWithResilience(providerId, apiKey, text, tone, la
 
   return {
     success: false,
+    kind: classifyError(lastError || {}),
     error: lastError?.message || 'Failed to fetch explanation'
   };
 }
@@ -289,13 +337,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const { text, tone, language } = message;
 
     chrome.storage.local.get(['provider', 'apiKeys'], (stored) => {
-      const providerId = stored.provider || 'openai';
+      const providerId = stored.provider || 'groq';
       const apiKeys = stored.apiKeys || {};
       const apiKey = apiKeys[providerId] || '';
 
       if (!apiKey) {
         sendResponse({
           success: false,
+          kind: 'auth',
           error: 'No API key configured. Open Settings and add your API key.'
         });
         return;
@@ -310,7 +359,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'VALIDATE_API_KEY') {
-    const providerId = message.provider || 'openai';
+    const providerId = message.provider || 'groq';
     const apiKey = (message.apiKey || '').trim();
 
     if (!apiKey) {
@@ -320,7 +369,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     validateApiKey(providerId, apiKey)
       .then(() => sendResponse({ success: true }))
-      .catch((error) => sendResponse({ success: false, error: error.message || 'Validation failed' }));
+      .catch((error) => sendResponse({
+        success: false,
+        kind: classifyError(error),
+        error: error.message || 'Validation failed'
+      }));
 
     return true;
   }
@@ -370,6 +423,7 @@ console.log('[Background] ExplainIt! service worker initialized (multi-provider 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     buildPrompt,
+    classifyError,
     callOpenAICompatible,
     callAnthropic,
     callGemini,

@@ -30,6 +30,16 @@
   --color-success: #10B981;
   --color-error: #EF4444;
   --color-warning: #F59E0B;
+
+  /* Success-state palette (used by Ready badge in empty-state) */
+  --color-success-bg: rgba(16, 185, 129, 0.12);
+  --color-success-border: rgba(16, 185, 129, 0.3);
+  --color-success-text: #065F46;
+
+  /* Selection / marker highlight (used in empty-state illustration) */
+  --color-marker: #BFDBFE;
+  --color-marker-line: rgba(37, 99, 235, 0.4);
+  --color-marker-ink: #0F172A;
   
   /* Spacing */
   --spacing-xs: 4px;
@@ -102,15 +112,14 @@ body {
 }
 
 .logo-icon {
-  width: 28px;
-  height: 28px;
-  background: var(--color-primary);
-  color: white;
-  border-radius: 50%;
-  display: flex;
+  /* The SVG itself IS the filled tile now — no outer circle wrapper.
+     Background / border-radius / box-shadow removed to avoid the
+     double-tile effect that resulted when the magnifier was a glyph. */
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.22);
 }
 
 .logo-icon svg {
@@ -186,55 +195,158 @@ body {
   }
 }
 
-/* TASK-022: Empty State */
+/* ─── Empty-state (branched: no-key / ready) ─────────────────────────────── */
+
 .empty-state {
-  text-align: center;
+  text-align: left;
   padding: var(--spacing-lg) var(--spacing-md);
 }
 
-.empty-icon {
-  color: var(--color-primary);
+.empty-state .empty-variant {
+  display: none;
+}
+.empty-state[data-variant="no-key"] .empty-variant[data-show-when="no-key"],
+.empty-state[data-variant="ready"]  .empty-variant[data-show-when="ready"] {
+  display: block;
+}
+
+.empty-state .empty-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.2px;
+  line-height: 1.25;
+  margin: 0 0 6px;
+  text-align: left;
+}
+.empty-state .empty-description {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin: 0 0 16px;
+  text-align: left;
+}
+
+/* ─── Variant A — Get free key CTA ─────────────────────────────────────── */
+
+.empty-key-icon {
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+  box-shadow: 0 12px 24px -8px rgba(37, 99, 235, 0.5);
+  color: #FFFFFF;
+  font-size: 28px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 4px auto 16px;
+}
+
+.empty-state .empty-variant[data-show-when="no-key"] .empty-title,
+.empty-state .empty-variant[data-show-when="no-key"] .empty-description {
+  text-align: center;
+}
+
+.empty-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
   margin-bottom: var(--spacing-md);
 }
 
-.empty-title {
-  font-size: var(--font-size-xl);
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: var(--spacing-sm);
-}
-
-.empty-description {
+.btn-ghost {
+  background: transparent;
   color: var(--color-text-secondary);
-  line-height: 1.6;
-  margin-bottom: var(--spacing-lg);
+  border: 1px solid var(--color-border);
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.btn-ghost:hover {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-text-muted);
 }
 
-.empty-features {
-  display: flex;
-  justify-content: space-around;
-  gap: var(--spacing-sm);
-  margin-top: var(--spacing-lg);
+.empty-trust-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  background: var(--color-bg-secondary);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
 }
+.empty-trust-icon { font-size: 16px; }
 
-.feature {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-xs);
-}
+/* ─── Variant B — Ready (status + illustration + tone-link) ───────────── */
 
-.feature-icon {
-  color: var(--color-primary);
+.status-badge {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  border: 1px solid var(--color-success-border);
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 18px;
+  white-space: nowrap;
+}
+.status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--color-success);
+}
+.status-sep { opacity: 0.5; }
+
+.empty-illustration {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--color-bg-secondary);
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 8px;
+}
+.empty-illustration-text {
+  flex: 1;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+.empty-illustration-bubble {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 16px -4px rgba(37, 99, 235, 0.45);
+  flex-shrink: 0;
 }
 
-.feature-text {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+.empty-mark {
+  background: var(--color-marker);
+  color: var(--color-marker-ink);
+  padding: 1px 2px;
+  box-shadow: inset 0 -2px 0 var(--color-marker-line);
 }
+
+.btn-link-row {
+  background: none;
+  border: none;
+  margin-top: 14px;
+  padding: 14px 0 0;
+  /* Visible separator (handoff said --color-bg-secondary, which is invisible against the popup bg) */
+  border-top: 1px solid var(--color-border);
+  width: 100%;
+  text-align: right;
+  color: var(--color-primary);
+  font-weight: 500;
+  font-size: 12px;
+  cursor: pointer;
+}
+.btn-link-row:hover { text-decoration: underline; }
 
 /* US-006: Loading State */
 #loading-state {
@@ -811,6 +923,22 @@ body {
   color: #b42318;
   background: rgba(255, 107, 107, 0.14);
   border-color: rgba(255, 107, 107, 0.35);
+}
+
+.key-hint {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 6px;
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.key-hint.error {
+  color: #b42318;
+}
+
+.key-hint.hidden {
+  display: none;
 }
 
 .btn-small {

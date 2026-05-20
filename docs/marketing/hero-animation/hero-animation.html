@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<style data-omelette-injected>html,body{background:transparent}</style><script data-omelette-injected>(()=>{var j=["https://claude.ai","https://preview.claude.ai"];var x=true;var S=30000;var f=3000;document.addEventListener("DOMContentLoaded",()=>{const H=window.Babel;const G="om-src-id";if(H&&H.registerPlugin&&!(H.availablePlugins&&H.availablePlugins[G])){H.registerPlugin(G,({types:Y})=>({visitor:{JSXOpeningElement(U,Q){const J=U.node;if(J.name&&J.name.type==="JSXMemberExpression")return;for(let V=0;V<J.attributes.length;V++){const L=J.attributes[V];if(L.type==="JSXAttribute"&&L.name&&L.name.name==="data-om-id")return}const W=Q.file&&Q.file.opts&&Q.file.opts.filename||"?";const Z=J.loc&&J.loc.start;const z=`jsx:${W}:${J.start??0}:${Z?Z.line:0}:${Z?Z.column+1:0}`;J.attributes.push(Y.jsxAttribute(Y.jsxIdentifier("data-om-id"),Y.stringLiteral(z)))}}}))}const k="om-text-extract";let A=false;if(x&&H&&H.registerPlugin&&!(H.availablePlugins&&H.availablePlugins[k])){const Y=window.React;if(Y&&Y.useSyncExternalStore&&Y.createElement){A=true;const U={};const Q=new Set;let J=0;window.__omTextO=U;window.__omTextSet=(z)=>{for(const V in z){const L=z[V];if(L==null)delete U[V];else U[V]=L}J++;Q.forEach((V)=>V())};const W=(z)=>{Q.add(z);return()=>Q.delete(z)};const Z=()=>J;window.__OmT=function z(V){Y.useSyncExternalStore(W,Z,Z);return Y.createElement("span",{"data-om-text":V.i,className:"__om-t"},V.i in U?U[V.i]:V.children)};H.registerPlugin(k,({types:z})=>{const V={style:1,script:1,noscript:1,textarea:1,title:1,option:1,text:1,tspan:1,textPath:1};const L={placeholder:1,alt:1,title:1,label:1,"aria-label":1,"aria-description":1,"aria-placeholder":1};const _=($,C)=>z.logicalExpression("??",z.memberExpression(z.logicalExpression("||",z.memberExpression(z.identifier("window"),z.identifier("__omTextO")),z.objectExpression([])),z.stringLiteral($),true),C);const E=($)=>$.file&&$.file.opts&&$.file.opts.filename||"?";const B=($)=>$.file&&$.file.code||"";const b=($,C)=>{const X=(F)=>F&&F.start!=null&&F.end!=null&&(F.type==="StringLiteral"||F.type==="TemplateLiteral"&&F.expressions.length===0)?[F.start,F.end]:null;const N=X(C);if(N)return N;if(C&&C.type==="Identifier"){const F=$.scope.getBinding(C.name);if(F&&F.constant&&F.path.node.type==="VariableDeclarator"){return X(F.path.node.init)}}return null};const M=($,C,X)=>{const N=$.node;let F=false;const w=(K,q)=>{F=true;return z.jsxElement(z.jsxOpeningElement(z.jsxIdentifier("__OmT"),[z.jsxAttribute(z.jsxIdentifier("i"),z.stringLiteral(K))],false),z.jsxClosingElement(z.jsxIdentifier("__OmT")),[q],false)};const D=N.children.map((K)=>{if(K.type==="JSXText"){if(K.start==null||K.end==null)return K;const q=X.slice(K.start,K.end);const R=q.length-q.trimStart().length;const m=q.length-q.trimEnd().length;if(R+m>=q.length)return K;return w(`txt:${C}:${K.start+R}:${K.end-m}`,K)}if(K.type==="JSXExpressionContainer"){const q=b($,K.expression);if(q)return w(`str:${C}:${q[0]}:${q[1]}`,K)}return K});if(F)N.children=D};return{visitor:{JSXOpeningElement($,C){const X=$.node;const N=E(C);const F={};for(let w=0;w<X.attributes.length;w++){const D=X.attributes[w];if(D.type!=="JSXAttribute"||!D.name)continue;const K=D.name.name;if(!L[K])continue;if(!D.value||D.value.type!=="StringLiteral")continue;if(D.value.start==null||D.value.end==null)continue;const q=`txt:${N}:${D.value.start}:${D.value.end}`;F[K]=q;D.value=z.jsxExpressionContainer(_(q,z.stringLiteral(D.value.value)))}if(Object.keys(F).length){X.attributes.push(z.jsxAttribute(z.jsxIdentifier("data-om-text-attrs"),z.stringLiteral(JSON.stringify(F))))}},JSXElement($,C){const X=$.node.openingElement;const N=X&&X.name&&X.name.name;if(N==="__OmT")return;if(typeof N==="string"&&V[N])return;M($,E(C),B(C))},JSXFragment($,C){M($,E(C),B(C))}}}})}}const u=A?["transform-react-jsx-source",G,k]:["transform-react-jsx-source",G];document.querySelectorAll('script[type="text/babel"],script[type="text/jsx"]').forEach((Y,U)=>{const Q=Y.getAttribute("data-plugins")||"";const J=u.filter((W)=>Q.indexOf(W)<0);if(J.length){Y.setAttribute("data-plugins",Q?`${Q},${J.join(",")}`:J.join(","))}if(!Y.hasAttribute("data-filename")){Y.setAttribute("data-filename",Y.getAttribute("src")||`inline-${U}`)}})});var y=window.parent;if(y&&y!==window){const H=(Q,J)=>{try{y.postMessage({__omelette_log:true,type:Q,data:J},"*")}catch{}};["log","warn","error"].forEach((Q)=>{const J=console[Q];console[Q]=(...W)=>{const Z=W.map((z)=>{try{return typeof z==="object"?JSON.stringify(z):String(z)}catch{try{return String(z)}catch{return"[unstringifiable]"}}}).join(" ");H(Q,Z);J.apply(console,W)}});window.addEventListener("error",(Q)=>{const J=Q.target;if(J&&J!==window&&J.tagName){const W=J.src||J.href||"";H("resource_error",`${J.tagName} failed to load: ${W}`)}else{H("error",`${Q.message||"Unknown error"} at ${Q.filename||"?"}:${Q.lineno||0}:${Q.colno||0}`)}},true);window.addEventListener("unhandledrejection",(Q)=>{const J=Q.reason;const W=J instanceof Error?`${J.message} ${J.stack}`:String(J);H("error",`Unhandled rejection: ${W}`)});const G=()=>{try{y.postMessage({type:"omelette:height",height:document.documentElement.scrollHeight},"*")}catch{}};if(document.readyState==="complete")G();else window.addEventListener("load",G);if(window.ResizeObserver)new ResizeObserver(G).observe(document.documentElement);const k={};let A=0;window.claude={complete(Q){return new Promise((J,W)=>{if(!j.length){W(new Error("claude.complete: no parent origin"));return}const Z=`c${++A}`;const z=()=>setTimeout(()=>{delete k[Z];W(new Error(`claude.complete: no data for ${S/1000}s`))},S);const V=z();k[Z]={resolve:J,reject:W,text:"",t:V,arm:z};try{for(const L of j){y.postMessage({__om_api:true,id:Z,body:Q},L)}}catch(L){clearTimeout(V);delete k[Z];W(L)}})}};const u={};let Y=0;window.omelette={writeFile:(Q,J)=>new Promise((W,Z)=>{if(!j.length){W();return}const z=`f${++Y}`;const V=setTimeout(()=>{delete u[z];W()},f);u[z]={resolve:W,reject:Z,t:V};try{for(const L of j){y.postMessage({__om_file:true,id:z,op:"write",path:Q,content:J},L)}}catch{clearTimeout(V);delete u[z];W()}})};const U=(Q)=>{try{return JSON.stringify(Q)}catch{return JSON.stringify(String(Q))}};window.addEventListener("message",(Q)=>{if(j.indexOf(Q.origin)<0)return;if(Q.source!==y)return;const J=Q.data;if(!J)return;if(J.type==="omelette-preview-refresh"){if(typeof J.token!=="string"||!/^[0-9a-f.-]+$/.test(J.token))return;const z=Math.max(1,Math.floor((J.expiresAt||0)-Date.now()/1000));document.cookie="__Host-omelette-preview="+J.token+"; Path=/; Secure; SameSite=None; Partitioned; Max-Age="+z;return}if(J.__om_file_r){const z=u[J.id];if(!z)return;clearTimeout(z.t);delete u[J.id];if(J.ok)z.resolve();else z.reject(new Error(J.error||"write failed"));return}if(J.__om_api_r){const z=k[J.id];if(!z)return;if(J.error!=null){clearTimeout(z.t);delete k[J.id];z.reject(new Error(J.error));return}if(J.chunk!=null){clearTimeout(z.t);z.t=z.arm();z.text+=J.chunk;return}if(J.done){clearTimeout(z.t);delete k[J.id];z.resolve(J.text!=null?J.text:z.text);return}return}if(!J.__om_eval)return;const W=J;const Z=(z)=>{Q.source.postMessage({...z,__om_eval_r:1,id:W.id},Q.origin)};try{const z=(0,eval)(W.code);if(z&&typeof z.then==="function"){z.then((V)=>Z({ok:1,v:U(V)}),(V)=>Z({ok:0,e:String(V)}))}else{Z({ok:1,v:U(z)})}}catch(z){Z({ok:0,e:String(z)})}})}})();
+</script>
+
+<meta charset="UTF-8" />
+<title>ExplainIt! — hero animation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #0F172A; font-family: 'Inter', system-ui, sans-serif; }
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  * { box-sizing: border-box; }
+  #stage-root { width: 100%; min-height: 100vh; position: relative; }
+</style>
+</head>
+<body>
+  <div id="stage-root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="animations.jsx"></script>
+  <script type="text/babel" src="icons.jsx"></script>
+
+  <script type="text/babel">
+    const { Stage, Sprite, useTime, useSprite, Easing, interpolate, animate } = window;
+
+    const DURATION = 7;     // seconds — full loop
+    const W = 800;
+    const H = 500;
+
+    // The article snippet that the animation interacts with
+    const SOURCE_TEXT_PRE = "The move is being characterised, perhaps loosely, as a ";
+    const SOURCE_TEXT_HL  = "bear-steepener driven by term premia rather than near-term policy expectations";
+    const SOURCE_TEXT_POST = " — a regime that historically punishes leveraged carry trades.";
+
+    // ───────────── Mini article surface ─────────────
+    const ArticleSurface = ({ markProgress }) => (
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: '#F8F8F5',
+        overflow: 'hidden',
+      }}>
+        {/* Top header bar */}
+        <div style={{
+          background: '#0B0B0B', color: '#FFFFFF',
+          padding: '8px 24px',
+          fontSize: 11, letterSpacing: 0.3,
+          fontFamily: 'JetBrains Mono, monospace',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ fontFamily: 'Source Serif 4, serif', fontSize: 14, fontWeight: 700 }}>
+              NORTHSTREAM<span style={{ color: '#F59E0B' }}>·</span>
+            </div>
+            <span style={{ opacity: 0.55, fontSize: 9 }}>MARKETS · RATES · POLICY</span>
+          </div>
+          <div style={{ fontSize: 9, opacity: 0.55 }}>14:32 EST</div>
+        </div>
+
+        {/* Article body */}
+        <div style={{ padding: '20px 36px 0' }}>
+          <div style={{
+            fontFamily: 'JetBrains Mono, monospace', fontSize: 9,
+            color: '#C2410C', letterSpacing: 1.4, fontWeight: 700, marginBottom: 8,
+          }}>RATES · ANALYSIS</div>
+          <h1 style={{
+            fontFamily: 'Source Serif 4, serif',
+            fontSize: 22, fontWeight: 700, lineHeight: 1.15, letterSpacing: -0.5,
+            margin: '0 0 16px', color: '#1A1A1A',
+          }}>
+            The bear-steepener nobody hedged for is back
+          </h1>
+          <p style={{
+            fontFamily: 'Source Serif 4, Georgia, serif',
+            fontSize: 14.5, lineHeight: 1.65, color: '#1A1A1A',
+            margin: '0 0 12px',
+          }}>
+            Long-end Treasury yields broke higher again on Tuesday, with the 30-year touching a two-month peak as a dovish Fed messaging vacuum collided with a heavier-than-expected coupon calendar.
+          </p>
+          <p style={{
+            fontFamily: 'Source Serif 4, Georgia, serif',
+            fontSize: 14.5, lineHeight: 1.65, color: '#1A1A1A',
+            margin: 0,
+            position: 'relative',
+          }}>
+            {SOURCE_TEXT_PRE}
+            <span style={{ position: 'relative', display: 'inline' }}>
+              {/* The highlighted span — animated via boxShadow width */}
+              <span style={{
+                background: markProgress > 0
+                  ? `linear-gradient(90deg, #BFDBFE 0%, #BFDBFE ${markProgress * 100}%, transparent ${markProgress * 100}%, transparent 100%)`
+                  : 'transparent',
+                boxShadow: markProgress > 0.95
+                  ? 'inset 0 -2px 0 rgba(37,99,235,0.35)'
+                  : 'none',
+                transition: 'box-shadow 0.15s',
+                padding: '2px 0',
+                color: '#1A1A1A',
+              }}>{SOURCE_TEXT_HL}</span>
+            </span>
+            {SOURCE_TEXT_POST}
+          </p>
+        </div>
+      </div>
+    );
+
+    // ───────────── Cursor ─────────────
+    const Cursor = ({ x, y, clicking }) => (
+      <svg width="22" height="28" viewBox="0 0 22 28" style={{
+        position: 'absolute', left: x, top: y, zIndex: 50,
+        transform: clicking ? 'scale(0.85)' : 'scale(1)',
+        transformOrigin: '2px 2px',
+        transition: 'transform 0.08s',
+        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
+        pointerEvents: 'none',
+      }}>
+        <path d="M2 2 L2 22 L8 17 L11 24 L14 23 L11 16 L18 16 Z" fill="#FFFFFF" stroke="#0F172A" strokeWidth="1.5" strokeLinejoin="round"/>
+      </svg>
+    );
+
+    // ───────────── Click ripple ─────────────
+    const ClickRipple = ({ x, y, t0, time }) => {
+      const dt = time - t0;
+      if (dt < 0 || dt > 0.6) return null;
+      const r = dt * 60;
+      const opacity = 1 - dt / 0.6;
+      return (
+        <div style={{
+          position: 'absolute', left: x - r/2, top: y - r/2,
+          width: r, height: r, borderRadius: '50%',
+          border: `2px solid rgba(37, 99, 235, ${opacity})`,
+          pointerEvents: 'none', zIndex: 49,
+        }} />
+      );
+    };
+
+    // ───────────── Floating bubble ─────────────
+    const FloatingBubble = ({ x, y, scale, opacity }) => (
+      <div style={{
+        position: 'absolute', left: x, top: y,
+        width: 44, height: 44, borderRadius: '50%',
+        background: '#2563EB',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 8px 24px -4px rgba(37,99,235,0.55), 0 0 0 4px rgba(37,99,235,0.12)',
+        transform: `scale(${scale})`,
+        transformOrigin: 'center',
+        opacity,
+        zIndex: 40,
+      }}>
+        <window.IconB size={28} />
+      </div>
+    );
+
+    // ───────────── Popup ─────────────
+    const ExplanationPopup = ({ progress }) => {
+      const scale = 0.85 + 0.15 * progress;
+      const opacity = progress;
+      const translateY = (1 - progress) * 16;
+      return (
+        <div style={{
+          position: 'absolute', right: 32, top: 90,
+          width: 360,
+          background: '#FFFFFF',
+          borderRadius: 14,
+          boxShadow: '0 30px 60px -15px rgba(0,0,0,0.5), 0 12px 24px -8px rgba(0,0,0,0.25), 0 0 0 1px rgba(15,23,42,0.08)',
+          overflow: 'hidden',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          color: '#0F172A',
+          transform: `scale(${scale}) translateY(${translateY}px)`,
+          transformOrigin: 'top right',
+          opacity,
+          zIndex: 45,
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '10px 14px',
+            borderBottom: '1px solid #E2E8F0',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <window.IconB size={20} />
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#2563EB' }}>ExplainIt!</span>
+              <span style={{
+                fontSize: 9, color: '#64748B', background: '#F1F5F9',
+                padding: '2px 7px', borderRadius: 999,
+                fontFamily: 'JetBrains Mono, monospace', fontWeight: 600,
+              }}>GPT-4o mini</span>
+            </div>
+          </div>
+          <div style={{ padding: '12px 14px 14px' }}>
+            <div style={{
+              fontSize: 9, fontWeight: 700, color: '#94A3B8',
+              textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6,
+            }}>Explanation</div>
+            <div style={{ fontSize: 13, lineHeight: 1.6, color: '#0F172A' }}>
+              <p style={{ margin: '0 0 8px' }}>
+                A <b>bear-steepener</b> means long-term bond yields are climbing faster than short-term ones.
+              </p>
+              <p style={{ margin: 0 }}>
+                <b>Term premia</b> is the extra return investors demand for holding long-dated bonds — not bets on rate cuts.
+              </p>
+            </div>
+            <div style={{
+              marginTop: 10, paddingTop: 8, borderTop: '1px solid #E2E8F0',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              <span style={{
+                fontSize: 10, color: '#475569', background: '#F1F5F9',
+                padding: '3px 8px', borderRadius: 999, fontWeight: 500,
+              }}>🇬🇧 English · Simple words</span>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ───────────── Scene ─────────────
+    const Scene = () => {
+      const time = useTime();
+
+      // Coordinate baseline: target text is around y=200, x=120-460
+      const HL_START_X = 120;
+      const HL_END_X = 460;
+      const HL_Y = 222;
+      const BUBBLE_X = 470;
+      const BUBBLE_Y = 200;
+
+      // Phase 1 (0–0.8s): cursor enters from left
+      // Phase 2 (0.8–1.8s): drag-highlight
+      // Phase 3 (1.8–2.4s): bubble appears
+      // Phase 4 (2.4–3.0s): cursor moves to bubble
+      // Phase 5 (3.0–3.2s): click
+      // Phase 6 (3.2–4.0s): popup expands
+      // Phase 7 (4.0–6.5s): hold
+      // Phase 8 (6.5–7.0s): fade out (subtle reset)
+
+      const cursorX = interpolate(
+        [0,    0.8,        1.8,       2.4,       3.0,       6.5,    7],
+        [-30,  HL_START_X, HL_END_X,  BUBBLE_X + 22, BUBBLE_X + 22, BUBBLE_X + 22, -30],
+        Easing.easeInOutCubic,
+      )(time);
+
+      const cursorY = interpolate(
+        [0,    0.8,    1.8,    2.4,       3.0,       6.5,    7],
+        [400,  HL_Y,   HL_Y,   BUBBLE_Y + 22, BUBBLE_Y + 22, BUBBLE_Y + 22, 400],
+        Easing.easeInOutCubic,
+      )(time);
+
+      const markProgress = interpolate(
+        [0.8, 1.8, 7],
+        [0, 1, 1],
+        Easing.easeOutCubic,
+      )(time);
+
+      const bubbleScale = interpolate(
+        [1.8, 2.4, 6.5, 7],
+        [0, 1, 1, 0],
+        Easing.easeOutBack,
+      )(time);
+
+      const bubbleOpacity = interpolate(
+        [1.8, 2.2, 6.5, 7],
+        [0, 1, 1, 0],
+        Easing.easeOutCubic,
+      )(time);
+
+      const popupProgress = interpolate(
+        [3.0, 3.2, 4.0, 6.5, 7],
+        [0, 0, 1, 1, 0],
+        Easing.easeOutCubic,
+      )(time);
+
+      const clicking = time >= 3.0 && time <= 3.2;
+      const clickAt = 3.0;
+
+      return (
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: '#0F172A',
+        }}>
+          {/* Article + window chrome */}
+          <div style={{
+            position: 'absolute', left: 14, top: 14, right: 14, bottom: 14,
+            background: '#E8EAED',
+            borderRadius: 10,
+            overflow: 'hidden',
+            boxShadow: '0 20px 40px -10px rgba(0,0,0,0.4)',
+          }}>
+            {/* Browser chrome */}
+            <div style={{
+              background: '#E8EAED', padding: '8px 12px',
+              display: 'flex', alignItems: 'center', gap: 10,
+              borderBottom: '1px solid #C8CCD2',
+            }}>
+              <div style={{ display: 'flex', gap: 5 }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#FF5F57' }} />
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#FEBC2E' }} />
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#28C840' }} />
+              </div>
+              <div style={{
+                flex: 1, background: '#FFFFFF', borderRadius: 5,
+                padding: '4px 10px', fontSize: 10, color: '#5F6368',
+                fontFamily: 'JetBrains Mono, monospace',
+              }}>
+                northstream.co/markets/bear-steepener
+              </div>
+              <div style={{ background: '#FFFFFF', borderRadius: 5, padding: 3, boxShadow: '0 0 0 1px #C8CCD2', display: 'flex' }}>
+                <window.IconB16 size={14} />
+              </div>
+            </div>
+            {/* Article */}
+            <div style={{ position: 'relative', flex: 1, height: 'calc(100% - 32px)' }}>
+              <ArticleSurface markProgress={markProgress} />
+            </div>
+          </div>
+
+          {/* Floating bubble — appears next to highlight */}
+          {bubbleOpacity > 0.01 && (
+            <FloatingBubble x={BUBBLE_X + 14} y={BUBBLE_Y - 8} scale={bubbleScale} opacity={bubbleOpacity} />
+          )}
+
+          {/* Popup */}
+          {popupProgress > 0.01 && <ExplanationPopup progress={popupProgress} />}
+
+          {/* Click ripple */}
+          <ClickRipple x={BUBBLE_X + 36} y={BUBBLE_Y + 14} t0={clickAt} time={time} />
+
+          {/* Cursor */}
+          <Cursor x={cursorX} y={cursorY} clicking={clicking} />
+
+          {/* Brand watermark */}
+          <div style={{
+            position: 'absolute', bottom: 12, right: 18,
+            display: 'flex', alignItems: 'center', gap: 6,
+            color: '#FFFFFF', opacity: 0.6, fontSize: 11, fontWeight: 500,
+            fontFamily: 'Inter, system-ui, sans-serif',
+            letterSpacing: 0.3,
+          }}>
+            <window.IconB16 size={14} />
+            ExplainIt!
+          </div>
+        </div>
+      );
+    };
+
+    // ───────────── Mount ─────────────
+    const root = ReactDOM.createRoot(document.getElementById('stage-root'));
+    root.render(
+      <Stage width={W} height={H} duration={DURATION} background="#0F172A" persistKey="hero-anim">
+        <Scene />
+      </Stage>
+    );
+  </script>
+</body>
+</html>

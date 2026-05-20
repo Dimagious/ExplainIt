@@ -24,6 +24,7 @@ global.fetch = jest.fn();
 
 const {
   buildPrompt,
+  classifyError,
   callOpenAICompatible,
   callAnthropic,
   callGemini,
@@ -147,6 +148,14 @@ describe('callAnthropic', () => {
     expect(opts.headers['anthropic-version']).toBeTruthy();
   });
 
+  test('sends anthropic-dangerous-direct-browser-access header (required for browser-origin calls)', async () => {
+    mockFetchOk(okResponse);
+    await callAnthropic(key, model, 'test');
+
+    const [, opts] = global.fetch.mock.calls[0];
+    expect(opts.headers['anthropic-dangerous-direct-browser-access']).toBe('true');
+  });
+
   test('calls api.anthropic.com, not openai.com', async () => {
     mockFetchOk(okResponse);
     await callAnthropic(key, model, 'test');
@@ -190,12 +199,13 @@ describe('callGemini', () => {
     candidates: [{ content: { parts: [{ text: 'Gemini explanation' }] } }]
   };
 
-  test('puts API key in URL query param — NOT in any header', async () => {
+  test('sends API key via x-goog-api-key header — NOT in URL query', async () => {
     mockFetchOk(okResponse);
     await callGemini(key, model, 'test prompt');
 
     const [url, opts] = global.fetch.mock.calls[0];
-    expect(url).toContain(`key=${key}`);
+    expect(url).not.toContain(`key=${key}`);
+    expect(opts.headers['x-goog-api-key']).toBe(key);
     expect(opts.headers['Authorization']).toBeUndefined();
     expect(opts.headers['x-api-key']).toBeUndefined();
   });
@@ -265,13 +275,14 @@ describe('callProvider: routing to correct API format', () => {
     expect(opts.headers['Authorization']).toBeUndefined();
   });
 
-  test('gemini → puts key in URL, NOT in any header', async () => {
+  test('gemini → puts key in x-goog-api-key header, NOT in URL', async () => {
     mockFetchOk({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] });
     await callProvider('gemini', 'AIzaKey', 'text', 'simple', 'en');
 
     const [url, opts] = global.fetch.mock.calls[0];
     expect(url).toContain('googleapis.com');
-    expect(url).toContain('key=AIzaKey');
+    expect(url).not.toContain('AIzaKey');
+    expect(opts.headers['x-goog-api-key']).toBe('AIzaKey');
     expect(opts.headers['Authorization']).toBeUndefined();
   });
 
@@ -397,5 +408,76 @@ describe('buildPrompt', () => {
     const prompt = buildPrompt('тест', 'simple', 'ru');
     expect(prompt).toContain('Текст:');
     expect(prompt).not.toContain('Text:');
+  });
+});
+
+// ─── classifyError ───────────────────────────────────────────────────────────
+
+describe('classifyError: mapping provider errors to UI kinds', () => {
+  test('401 → auth', () => {
+    expect(classifyError({ status: 401, message: 'Unauthorized' })).toBe('auth');
+  });
+
+  test('"Incorrect API key" message → auth', () => {
+    expect(classifyError({ message: 'Incorrect API key provided: sk-xxxx' })).toBe('auth');
+  });
+
+  test('"API key not valid" (Gemini) → auth', () => {
+    expect(classifyError({ status: 400, message: 'API key not valid' })).toBe('auth');
+  });
+
+  test('429 → rate_limit', () => {
+    expect(classifyError({ status: 429, message: 'Too Many Requests' })).toBe('rate_limit');
+  });
+
+  test('"insufficient_quota" → quota (not auth, not rate_limit even on 429)', () => {
+    expect(classifyError({ status: 429, message: 'You exceeded your current quota (insufficient_quota)' })).toBe('quota');
+  });
+
+  test('"billing" message → quota', () => {
+    expect(classifyError({ status: 403, message: 'Billing not enabled' })).toBe('quota');
+  });
+
+  test('CORS / dangerous-direct-browser → cors', () => {
+    expect(classifyError({ message: "CORS requests must set 'anthropic-dangerous-direct-browser-access' header to 'true'." })).toBe('cors');
+  });
+
+  test('"Failed to fetch" → network (possibly missing host permission)', () => {
+    expect(classifyError({ message: 'Failed to fetch' })).toBe('network');
+  });
+
+  test('"Request timed out" → network', () => {
+    expect(classifyError({ message: 'Request timed out' })).toBe('network');
+  });
+
+  test('500+ → server', () => {
+    expect(classifyError({ status: 502, message: 'Bad Gateway' })).toBe('server');
+  });
+
+  test('unknown error → unknown', () => {
+    expect(classifyError({ message: 'something weird' })).toBe('unknown');
+  });
+
+  test('null/empty input → unknown (does not throw)', () => {
+    expect(classifyError({})).toBe('unknown');
+    expect(classifyError(null)).toBe('unknown');
+  });
+});
+
+// ─── fetchExplanationWithResilience: typed error response ────────────────────
+
+describe('fetchExplanationWithResilience: includes kind in error response', () => {
+  test('401 returns kind: "auth" (not retried, single fetch)', async () => {
+    mockFetchFail(401, 'Incorrect API key');
+    const result = await fetchExplanationWithResilience('openai', 'sk-bad', 'hi', 'simple', 'en');
+    expect(result.success).toBe(false);
+    expect(result.kind).toBe('auth');
+  });
+
+  test('400 with "API key not valid" (Gemini) returns kind: "auth"', async () => {
+    mockFetchFail(400, 'API key not valid');
+    const result = await fetchExplanationWithResilience('gemini', 'wrong-key', 'hi', 'simple', 'en');
+    expect(result.success).toBe(false);
+    expect(result.kind).toBe('auth');
   });
 });

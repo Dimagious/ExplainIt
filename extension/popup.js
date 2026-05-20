@@ -12,8 +12,9 @@ let currentState = 'empty';
 const DEFAULT_SETTINGS = {
   language: 'en',
   tone: 'simple',
-  provider: 'openai',
-  apiKeys: {}   // { openai: '...', anthropic: '...', gemini: '...', groq: '...' }
+  provider: 'groq',
+  apiKeys: {},   // { openai: '...', anthropic: '...', gemini: '...', groq: '...' }
+  setupCompleted: false
 };
 
 // Runtime settings (mutable, can include unsaved edits in Settings screen)
@@ -39,11 +40,46 @@ let abortController = null;
 // ─── Provider metadata (mirrors config.js PROVIDERS) ─────────────────────────
 
 const PROVIDER_META = {
-  openai:    { name: 'OpenAI',    keyUrl: 'https://platform.openai.com/api-keys',        placeholder: 'sk-...' },
-  anthropic: { name: 'Anthropic', keyUrl: 'https://console.anthropic.com/settings/keys', placeholder: 'sk-ant-...' },
-  gemini:    { name: 'Google',    keyUrl: 'https://aistudio.google.com/app/apikey',       placeholder: 'AIza...' },
-  groq:      { name: 'Groq',      keyUrl: 'https://console.groq.com/keys',               placeholder: 'gsk_...' }
+  openai:    { name: 'OpenAI',    keyUrl: 'https://platform.openai.com/api-keys',         placeholder: 'sk-...',     keyPrefix: 'sk-' },
+  anthropic: { name: 'Anthropic', keyUrl: 'https://console.anthropic.com/settings/keys',  placeholder: 'sk-ant-...', keyPrefix: 'sk-ant-' },
+  gemini:    { name: 'Google',    keyUrl: 'https://aistudio.google.com/app/apikey',        placeholder: 'AIza...',    keyPrefix: 'AIza' },
+  groq:      { name: 'Groq',      keyUrl: 'https://console.groq.com/keys',                placeholder: 'gsk_...',    keyPrefix: 'gsk_' }
 };
+
+// Host permissions per provider (matches optional_host_permissions in manifest)
+const PROVIDER_HOSTS = {
+  openai:    'https://api.openai.com/*',
+  anthropic: 'https://api.anthropic.com/*',
+  gemini:    'https://generativelanguage.googleapis.com/*',
+  groq:      'https://api.groq.com/*'
+};
+
+function isValidKeyPrefix(provider, keyValue) {
+  const prefix = PROVIDER_META[provider]?.keyPrefix;
+  if (!prefix) return true;
+  if (!keyValue) return true; // empty is handled by 'not-set'
+  return keyValue.startsWith(prefix);
+}
+
+/**
+ * Ensure the user has granted host permission for this provider's API.
+ * Triggers chrome.permissions.request inside the user-gesture context (popup click).
+ * Returns true if granted, false if denied or chrome.permissions is unavailable.
+ */
+async function ensureHostPermission(provider) {
+  const origin = PROVIDER_HOSTS[provider];
+  if (!origin) return true;
+  if (!chrome?.permissions) return true; // older browsers / tests
+
+  try {
+    const has = await chrome.permissions.contains({ origins: [origin] });
+    if (has) return true;
+    return await chrome.permissions.request({ origins: [origin] });
+  } catch (e) {
+    console.warn('[ExplainIt] permission check failed:', e);
+    return true; // fail open — let downstream fetch handle it
+  }
+}
 
 const KEY_STATUS_LABELS = {
   'not-set': 'Not set',
@@ -51,6 +87,18 @@ const KEY_STATUS_LABELS = {
   testing: 'Testing...',
   validated: 'Validated',
   invalid: 'Invalid'
+};
+
+// Maps a classified error kind from background.js into user-facing chip+hint copy.
+const KIND_TO_KEY_COPY = {
+  auth:       { label: 'Invalid key',        hint: 'The provider rejected this key. Double-check you copied it in full.' },
+  quota:      { label: 'No credit',          hint: 'Key works but the account has no credit. Add billing on the provider dashboard, or switch to Groq (free).' },
+  rate_limit: { label: 'Rate limited',       hint: 'Provider is throttling requests. Wait a minute and try again.' },
+  cors:       { label: 'Provider blocked',   hint: 'Provider blocked the request. Update the extension or switch to Groq.' },
+  permission: { label: 'Permission needed',  hint: 'Click "Test key" and allow access for this provider.' },
+  network:    { label: 'Network error',      hint: 'Check your connection and retry.' },
+  server:     { label: 'Provider down',      hint: 'Provider is temporarily unavailable. Retry shortly.' },
+  unknown:    { label: 'Test failed',        hint: 'Something went wrong. Try again or switch provider.' }
 };
 
 function storageGet(area, keys) {
@@ -128,7 +176,8 @@ function cloneSettings(source = {}) {
     language: source.language || DEFAULT_SETTINGS.language,
     tone: source.tone || DEFAULT_SETTINGS.tone,
     provider: source.provider || DEFAULT_SETTINGS.provider,
-    apiKeys: { ...(source.apiKeys || {}) }
+    apiKeys: { ...(source.apiKeys || {}) },
+    setupCompleted: source.setupCompleted === true
   };
 }
 
@@ -165,6 +214,11 @@ function showState(stateId) {
   if (target) {
     target.classList.remove('hidden');
     currentState = stateId;
+
+    // Refresh branched empty-state variant whenever it becomes visible.
+    if (stateId === 'empty') {
+      renderEmptyState();
+    }
   }
 }
 
@@ -193,19 +247,27 @@ async function loadSettings() {
     }
   }
 
-  // Provider + API keys are local only (security)
+  // Provider + API keys + setupCompleted are local only (security)
   try {
-    localStored = await storageGet(chrome.storage.local, ['provider', 'apiKeys']);
+    localStored = await storageGet(chrome.storage.local, ['provider', 'apiKeys', 'setupCompleted']);
   } catch (error) {
     console.error('[ExplainIt] Error loading local settings:', error);
     localStored = {};
   }
 
+  // Legacy migration: a returning user from before setupCompleted existed
+  // already has API keys. Treat them as set up so we don't ambush them
+  // with the welcome notice after the update.
+  const legacyHasKey = localStored.apiKeys &&
+    Object.values(localStored.apiKeys).some(v => v && String(v).trim().length > 0);
+  const inferredSetupCompleted = localStored.setupCompleted === true || legacyHasKey === true;
+
   const loaded = cloneSettings({
     language: syncStored.language || localStored.language || DEFAULT_SETTINGS.language,
     tone: syncStored.tone || localStored.tone || DEFAULT_SETTINGS.tone,
     provider: localStored.provider || DEFAULT_SETTINGS.provider,
-    apiKeys: localStored.apiKeys || {}
+    apiKeys: localStored.apiKeys || {},
+    setupCompleted: inferredSetupCompleted
   });
 
   settings = cloneSettings(loaded);
@@ -225,14 +287,19 @@ async function saveSettings(newSettings) {
 
   const nextSettings = cloneSettings({ ...settings, ...newSettings });
 
+  // Sticky setupCompleted: once true, stays true. Becomes true the first
+  // time the user saves with a non-empty key for the chosen provider.
+  const providerKeyPresent = !!(nextSettings.apiKeys?.[nextSettings.provider] || '').trim();
+  nextSettings.setupCompleted = persistedSettings.setupCompleted === true || providerKeyPresent;
+
   try {
-    const { language, tone, provider, apiKeys } = nextSettings;
+    const { language, tone, provider, apiKeys, setupCompleted } = nextSettings;
 
     // Preferences → sync storage (cross-device)
     await storageSet(chrome.storage.sync, { language, tone });
 
-    // Provider + API keys → local storage only (security)
-    await storageSet(chrome.storage.local, { provider, apiKeys });
+    // Provider + API keys + setupCompleted → local storage only (security)
+    await storageSet(chrome.storage.local, { provider, apiKeys, setupCompleted });
 
     settings = cloneSettings(nextSettings);
     persistedSettings = cloneSettings(nextSettings);
@@ -243,8 +310,8 @@ async function saveSettings(newSettings) {
 
     // Fallback: save everything to local
     try {
-      const { language, tone, provider, apiKeys } = nextSettings;
-      await storageSet(chrome.storage.local, { language, tone, provider, apiKeys });
+      const { language, tone, provider, apiKeys, setupCompleted } = nextSettings;
+      await storageSet(chrome.storage.local, { language, tone, provider, apiKeys, setupCompleted });
       settings = cloneSettings(nextSettings);
       persistedSettings = cloneSettings(nextSettings);
       return { success: true, fallback: true };
@@ -290,11 +357,24 @@ function updateKeyStatusUI(providerId = settings.provider) {
   if (!statusEl) return;
 
   const status = keyStatusByProvider[providerId] || 'not-set';
-  const message = keyStatusMessageByProvider[providerId] || '';
+  const fullMessage = keyStatusMessageByProvider[providerId] || '';
   const label = KEY_STATUS_LABELS[status] || KEY_STATUS_LABELS['not-set'];
 
-  statusEl.textContent = message ? `${label}: ${message}` : label;
+  // For 'invalid' state we store a typed override label in `fullMessage` like "Invalid key|hint text".
+  // The chip shows just the short label; the hint goes to the wrapped #api-key-hint element below.
+  const sepIdx = fullMessage.indexOf('|');
+  const chipOverrideLabel = sepIdx >= 0 ? fullMessage.slice(0, sepIdx) : '';
+  const hint              = sepIdx >= 0 ? fullMessage.slice(sepIdx + 1) : fullMessage;
+
+  statusEl.textContent = chipOverrideLabel || label;
   statusEl.className = `key-status ${status}`;
+
+  const hintEl = document.getElementById('api-key-hint');
+  if (hintEl) {
+    hintEl.textContent = hint || '';
+    hintEl.classList.toggle('hidden', !hint);
+    hintEl.classList.toggle('error', status === 'invalid');
+  }
 }
 
 function setKeyStatus(providerId, status, message = '') {
@@ -304,6 +384,15 @@ function setKeyStatus(providerId, status, message = '') {
   if (providerId === settings.provider) {
     updateKeyStatusUI(providerId);
   }
+}
+
+/**
+ * Set 'invalid' key-status using typed copy from KIND_TO_KEY_COPY.
+ * Chip shows the short label; the wrapped #api-key-hint shows the full hint.
+ */
+function setKeyStatusFromKind(providerId, kind) {
+  const copy = KIND_TO_KEY_COPY[kind] || KIND_TO_KEY_COPY.unknown;
+  setKeyStatus(providerId, 'invalid', `${copy.label}|${copy.hint}`);
 }
 
 function updateProviderCardAria() {
@@ -325,7 +414,17 @@ function isKeyRelatedErrorMessage(message = '') {
   );
 }
 
-function mapUserFacingError(message = '', keyRelatedHint = false) {
+function mapUserFacingError(message = '', keyRelatedHint = false, kind = null) {
+  // Kind-driven copy when background classified the error.
+  if (kind && KIND_TO_KEY_COPY[kind]) {
+    const copy = KIND_TO_KEY_COPY[kind];
+    const isKeyRelated = kind === 'auth' || kind === 'quota' || kind === 'permission';
+    return {
+      message: `${copy.label}.\n${copy.hint}`.trim(),
+      isKeyRelated
+    };
+  }
+
   const normalized = message.toLowerCase();
 
   if (isKeyRelatedErrorMessage(message) || keyRelatedHint) {
@@ -358,6 +457,51 @@ function mapUserFacingError(message = '', keyRelatedHint = false) {
     message: message || 'Failed to generate explanation. Please try again.',
     isKeyRelated: false
   };
+}
+
+// ─── Empty-state branching (no-key vs ready) ─────────────────────────────────
+
+const STATUS_PROVIDER_LABELS = {
+  groq:      'Groq ⚡',
+  openai:    'OpenAI · GPT-4o mini',
+  anthropic: 'Anthropic · Claude Haiku',
+  gemini:    'Google · Gemini Flash'
+};
+
+// Trimmed to languages the extension actually supports today (en/ru).
+// Multi-language output is scheduled for a separate 2.1.0 release —
+// this map grows when promo templates land for additional languages.
+const STATUS_LANGUAGE_LABELS = {
+  en: '🇬🇧 English',
+  ru: '🇷🇺 Русский'
+};
+
+/**
+ * Decide which empty-state variant to render based on already-loaded
+ * `persistedSettings`. No new storage round-trip — we keep render in sync
+ * with whatever loadSettings() last produced.
+ *
+ *   - !setupCompleted              → "no-key"  (Get free key CTA)
+ *   - setupCompleted               → "ready"   (status badge + idle copy)
+ */
+function renderEmptyState() {
+  const emptyEl = document.getElementById('empty-state');
+  if (!emptyEl) return;
+
+  if (!persistedSettings.setupCompleted) {
+    emptyEl.dataset.variant = 'no-key';
+    return;
+  }
+
+  emptyEl.dataset.variant = 'ready';
+  paintReadyChips(persistedSettings.provider, persistedSettings.language);
+}
+
+function paintReadyChips(provider, language) {
+  const providerEl = document.getElementById('status-provider');
+  const languageEl = document.getElementById('status-language');
+  if (providerEl) providerEl.textContent = STATUS_PROVIDER_LABELS[provider] || 'AI';
+  if (languageEl) languageEl.textContent = STATUS_LANGUAGE_LABELS[language] || STATUS_LANGUAGE_LABELS.en;
 }
 
 // ─── Settings UI ──────────────────────────────────────────────────────────────
@@ -500,7 +644,11 @@ function setupEventListeners() {
       settings = cloneSettings(persistedSettings);
       draftApiKeys = {}; // Reset draft on each open
       updateSettingsUI();
-      document.getElementById('welcome-notice')?.classList.add('hidden');
+      // Hide welcome notice only for users who have already finished setup —
+      // otherwise the gear click would dismiss the very nudge that should still help them.
+      if (persistedSettings.setupCompleted) {
+        document.getElementById('welcome-notice')?.classList.add('hidden');
+      }
       showScreen('settings');
     });
   }
@@ -551,9 +699,22 @@ function setupEventListeners() {
       const provider = settings.provider;
       const keyValue = apiKeyInput.value.trim();
       draftApiKeys[provider] = keyValue;
-      setKeyStatus(provider, inferKeyStatusFromValue(keyValue));
+
+      // Client-side prefix sanity check — surfaces "wrong-provider key" silently
+      // before the user wastes a roundtrip on Test key.
+      if (keyValue && !isValidKeyPrefix(provider, keyValue)) {
+        const expectedPrefix = PROVIDER_META[provider]?.keyPrefix || '';
+        setKeyStatus(
+          provider,
+          'invalid',
+          `Wrong format|Expected key starting with "${expectedPrefix}" for ${PROVIDER_META[provider]?.name || provider}. Did you pick the wrong provider?`
+        );
+      } else {
+        setKeyStatus(provider, inferKeyStatusFromValue(keyValue));
+      }
+
       if (testKeyBtn) {
-        testKeyBtn.disabled = !keyValue;
+        testKeyBtn.disabled = !keyValue || !isValidKeyPrefix(provider, keyValue);
       }
     });
   }
@@ -565,6 +726,15 @@ function setupEventListeners() {
 
       if (!keyValue) {
         setKeyStatus(provider, 'not-set');
+        return;
+      }
+
+      // Ask for host permission first (optional_host_permissions migration).
+      // This is a click-handler user-gesture context, so chrome.permissions.request
+      // is allowed to surface a native confirmation dialog.
+      const permissionOk = await ensureHostPermission(provider);
+      if (!permissionOk) {
+        setKeyStatusFromKind(provider, 'permission');
         return;
       }
 
@@ -580,8 +750,9 @@ function setupEventListeners() {
       if (result.success) {
         setKeyStatus(provider, 'validated');
       } else {
-        const shortError = (result.error || 'Invalid key').slice(0, 60);
-        setKeyStatus(provider, 'invalid', shortError);
+        // Backend returns { success: false, kind, error }. Prefer kind-driven copy.
+        const kind = result.kind || 'unknown';
+        setKeyStatusFromKind(provider, kind);
       }
     });
   }
@@ -605,6 +776,19 @@ function setupEventListeners() {
       const saveBtn = document.getElementById('save-btn');
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving...';
+
+      // If user is saving a key for this provider, ensure we have the host permission
+      // for that provider's API. Click context = user gesture, so this is allowed.
+      if (currentKey) {
+        const permissionOk = await ensureHostPermission(provider);
+        if (!permissionOk) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Settings';
+          setKeyStatusFromKind(provider, 'permission');
+          showSaveConfirmation('error', `Permission required for ${PROVIDER_META[provider]?.name || provider}. Click Test key and allow.`);
+          return;
+        }
+      }
 
       const result = await saveSettings({ language, tone, provider, apiKeys: mergedKeys });
 
@@ -638,6 +822,37 @@ function setupEventListeners() {
       updateSettingsUI();
       showScreen('settings');
       document.getElementById('welcome-notice')?.classList.remove('hidden');
+    });
+  }
+
+  // Empty-state "no-key" variant — Get free Groq key in a new tab.
+  const emptyGetKeyBtn = document.getElementById('empty-get-key-btn');
+  if (emptyGetKeyBtn) {
+    emptyGetKeyBtn.addEventListener('click', () => {
+      // Always send users to Groq for the first key: it's free, no card,
+      // and matches the popup's default-provider selection.
+      chrome.tabs.create({ url: PROVIDER_META.groq.keyUrl });
+    });
+  }
+
+  // Empty-state "no-key" variant — user already has a key; jump to Settings.
+  const emptyHaveKeyBtn = document.getElementById('empty-have-key-btn');
+  if (emptyHaveKeyBtn) {
+    emptyHaveKeyBtn.addEventListener('click', () => {
+      draftApiKeys = {};
+      updateSettingsUI();
+      showScreen('settings');
+      document.getElementById('welcome-notice')?.classList.remove('hidden');
+    });
+  }
+
+  // Empty-state "ready" variant — deep-link to Settings (tone picker is there).
+  const emptyChangeToneBtn = document.getElementById('empty-change-tone-btn');
+  if (emptyChangeToneBtn) {
+    emptyChangeToneBtn.addEventListener('click', () => {
+      draftApiKeys = {};
+      updateSettingsUI();
+      showScreen('settings');
     });
   }
 }
@@ -775,7 +990,10 @@ async function fetchExplanation(text) {
 
     if (!response?.success) {
       const rawError = response?.error || 'Failed to fetch explanation';
-      throw Object.assign(new Error(rawError), { isNoKeyError: isKeyRelatedErrorMessage(rawError) });
+      throw Object.assign(new Error(rawError), {
+        isNoKeyError: isKeyRelatedErrorMessage(rawError),
+        kind: response?.kind || null
+      });
     }
 
     hideLoadingState();
@@ -791,7 +1009,7 @@ async function fetchExplanation(text) {
     }
 
     console.error('[ExplainIt] Error fetching explanation:', error);
-    const mapped = mapUserFacingError(error.message, error.isNoKeyError);
+    const mapped = mapUserFacingError(error.message, error.isNoKeyError, error.kind);
     showErrorState(mapped.message, text, mapped.isKeyRelated);
   } finally {
     abortController = null;
@@ -870,10 +1088,11 @@ async function init() {
   setupEventListeners();
   showScreen('result');
 
-  // First-run check: if no API key for current provider → open Settings with welcome notice
-  const hasKey = !!(settings.apiKeys[settings.provider]);
-  if (!hasKey) {
-    console.log('[ExplainIt] No API key found — opening Settings for first-run setup');
+  // First-run check: drive off setupCompleted (not just apiKeys[provider]) so that a
+  // half-finished setup (e.g. user pasted a key then got a 'quota' error and walked away)
+  // still gets the welcome nudge on next popup open.
+  if (!settings.setupCompleted) {
+    console.log('[ExplainIt] Setup not completed — opening Settings for first-run');
     document.getElementById('welcome-notice')?.classList.remove('hidden');
     showScreen('settings');
     return;
@@ -912,6 +1131,7 @@ if (typeof module !== 'undefined' && module.exports) {
     showResult,
     updateSettingsUI,
     showSaveConfirmation,
-    onProviderSwitch
+    onProviderSwitch,
+    renderEmptyState
   };
 }

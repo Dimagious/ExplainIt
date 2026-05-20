@@ -1,2 +1,1 @@
-Instantly explain any selected text with AI. Simple words, kid-friendly, or expert level. Multi-language support.
-
+Highlight any sentence on the web and get a plain-English explanation in seconds. Works free with Groq. Adjustable tone.

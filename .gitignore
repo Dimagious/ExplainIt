@@ -155,3 +155,6 @@ extension/*.zip
 *.swp
 *.swo
 *~
+
+# macOS Finder metadata
+.DS_Store

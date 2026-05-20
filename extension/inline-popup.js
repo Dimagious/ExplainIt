@@ -10,12 +10,12 @@ let inlinePopup = null;
 let popupShadowRoot = null;
 let retryCount = 0;
 let currentText = null;
-let currentSettings = { language: 'en', tone: 'simple', provider: 'openai', apiKeys: {} };
+let currentSettings = { language: 'en', tone: 'simple', provider: 'groq', apiKeys: {} };
 
 const INLINE_DEFAULT_SETTINGS = {
   language: 'en',
   tone: 'simple',
-  provider: 'openai',
+  provider: 'groq',
   apiKeys: {}
 };
 
@@ -23,23 +23,46 @@ const INLINE_PROVIDER_META = {
   openai: {
     name: 'OpenAI',
     placeholder: 'sk-...',
-    keyUrl: 'https://platform.openai.com/api-keys'
+    keyUrl: 'https://platform.openai.com/api-keys',
+    keyPrefix: 'sk-'
   },
   anthropic: {
     name: 'Anthropic',
     placeholder: 'sk-ant-...',
-    keyUrl: 'https://console.anthropic.com/settings/keys'
+    keyUrl: 'https://console.anthropic.com/settings/keys',
+    keyPrefix: 'sk-ant-'
   },
   gemini: {
     name: 'Google',
     placeholder: 'AIza...',
-    keyUrl: 'https://aistudio.google.com/app/apikey'
+    keyUrl: 'https://aistudio.google.com/app/apikey',
+    keyPrefix: 'AIza'
   },
   groq: {
     name: 'Groq',
     placeholder: 'gsk_...',
-    keyUrl: 'https://console.groq.com/keys'
+    keyUrl: 'https://console.groq.com/keys',
+    keyPrefix: 'gsk_'
   }
+};
+
+function isInlineValidKeyPrefix(provider, keyValue) {
+  const prefix = INLINE_PROVIDER_META[provider]?.keyPrefix;
+  if (!prefix || !keyValue) return true;
+  return keyValue.startsWith(prefix);
+}
+
+// Inline-popup mirror of popup.js KIND_TO_KEY_COPY — kept inline because
+// content scripts cannot importScripts. Stays in sync with popup.js by convention.
+const INLINE_KIND_TO_KEY_COPY = {
+  auth:       { label: 'Invalid key',       hint: 'Provider rejected this key. Double-check it was copied in full.' },
+  quota:      { label: 'No credit',          hint: 'Key works but the account has no credit. Add billing, or switch to Groq (free).' },
+  rate_limit: { label: 'Rate limited',       hint: 'Provider is throttling. Wait a minute and try again.' },
+  cors:       { label: 'Provider blocked',   hint: 'Provider blocked the request. Update the extension or switch to Groq.' },
+  permission: { label: 'Permission needed',  hint: 'Open the toolbar popup and click Test key to grant access for this provider.' },
+  network:    { label: 'Network error',      hint: 'Check your connection and retry.' },
+  server:     { label: 'Provider down',      hint: 'Provider is temporarily unavailable. Retry shortly.' },
+  unknown:    { label: 'Test failed',        hint: '' }
 };
 
 const INLINE_KEY_STATUS_LABELS = {
@@ -149,8 +172,18 @@ function saveInlineSettings(nextSettings, callback) {
   );
 }
 
-function mapInlineErrorMessage(message = '') {
-  const normalized = message.toLowerCase();
+/**
+ * Convert an explanation-flow error into user-facing copy.
+ * Prefers a typed `kind` from background classifyError; falls back to
+ * keyword scanning for legacy/unclassified errors.
+ */
+function mapInlineErrorMessage(message = '', kind = null) {
+  if (kind && INLINE_KIND_TO_KEY_COPY[kind]) {
+    const copy = INLINE_KIND_TO_KEY_COPY[kind];
+    return `${copy.label}. ${copy.hint}`.trim();
+  }
+
+  const normalized = (message || '').toLowerCase();
 
   if (
     normalized.includes('no api key') ||
@@ -701,10 +734,10 @@ function createInlinePopup(selectedText, options = {}) {
             </label>
             <div class="form-description">Choose which provider will generate explanations.</div>
             <select id="inline-provider-select" class="form-select">
-              <option value="openai" ${currentSettings.provider === 'openai' ? 'selected' : ''}>OpenAI (GPT-4o mini)</option>
-              <option value="anthropic" ${currentSettings.provider === 'anthropic' ? 'selected' : ''}>Anthropic (Claude Haiku)</option>
-              <option value="gemini" ${currentSettings.provider === 'gemini' ? 'selected' : ''}>Google Gemini (Flash)</option>
-              <option value="groq" ${currentSettings.provider === 'groq' ? 'selected' : ''}>Groq (Llama 3.3 70B)</option>
+              <option value="groq" ${currentSettings.provider === 'groq' ? 'selected' : ''}>Groq — Llama 3.3 70B (Free, no card)</option>
+              <option value="gemini" ${currentSettings.provider === 'gemini' ? 'selected' : ''}>Google Gemini Flash</option>
+              <option value="openai" ${currentSettings.provider === 'openai' ? 'selected' : ''}>OpenAI GPT-4o mini</option>
+              <option value="anthropic" ${currentSettings.provider === 'anthropic' ? 'selected' : ''}>Anthropic Claude Haiku</option>
             </select>
           </div>
           <div class="form-group">
@@ -860,6 +893,14 @@ function createInlinePopup(selectedText, options = {}) {
           return;
         }
 
+        // Client-side prefix sanity check.
+        if (!isInlineValidKeyPrefix(activeProvider, apiKey)) {
+          const expected = INLINE_PROVIDER_META[activeProvider]?.keyPrefix || '';
+          const providerName = INLINE_PROVIDER_META[activeProvider]?.name || activeProvider;
+          setInlineKeyStatus(activeProvider, 'invalid', `Wrong format. Expected key starting with "${expected}" for ${providerName}.`);
+          return;
+        }
+
         setInlineKeyStatus(activeProvider, 'testing');
         testKeyBtn.disabled = true;
         testKeyBtn.textContent = 'Testing...';
@@ -874,12 +915,14 @@ function createInlinePopup(selectedText, options = {}) {
           if (response?.success) {
             setInlineKeyStatus(activeProvider, 'validated');
           } else {
-            const shortError = (response?.error || 'Invalid key').slice(0, 60);
-            setInlineKeyStatus(activeProvider, 'invalid', shortError);
+            // Backend now returns { success: false, kind, error }. Use kind-driven copy.
+            const kind = response?.kind || 'unknown';
+            const copy = INLINE_KIND_TO_KEY_COPY[kind] || INLINE_KIND_TO_KEY_COPY.unknown;
+            setInlineKeyStatus(activeProvider, 'invalid', `${copy.label}. ${copy.hint}`.trim());
           }
         } catch (error) {
-          const shortError = (error?.message || 'Validation failed').slice(0, 60);
-          setInlineKeyStatus(activeProvider, 'invalid', shortError);
+          // Network-level failure (rare — sendMessage rejected).
+          setInlineKeyStatus(activeProvider, 'invalid', INLINE_KIND_TO_KEY_COPY.network.label + '. ' + INLINE_KIND_TO_KEY_COPY.network.hint);
         } finally {
           testKeyBtn.textContent = 'Test key';
           testKeyBtn.disabled = !(keyInput && keyInput.value.trim());
@@ -1001,7 +1044,7 @@ async function fetchExplanation(text) {
     }
     
     // Use current settings (already loaded)
-    const provider = currentSettings.provider || 'openai';
+    const provider = currentSettings.provider || 'groq';
     const language = currentSettings.language || 'en';
     const tone = currentSettings.tone || 'simple';
     
@@ -1023,7 +1066,9 @@ async function fetchExplanation(text) {
     });
     
     if (!response || !response.success) {
-      throw new Error(response?.error || 'Failed to fetch explanation');
+      const err = new Error(response?.error || 'Failed to fetch explanation');
+      err.kind = response?.kind || 'unknown';
+      throw err;
     }
     
     console.log('[InlinePopup] Got explanation from background');
@@ -1037,7 +1082,7 @@ async function fetchExplanation(text) {
   } catch (error) {
     console.error('[InlinePopup] Error:', error);
 
-    showError(mapInlineErrorMessage(error.message), text);
+    showError(mapInlineErrorMessage(error.message, error.kind), text);
   }
 }
 
@@ -1056,7 +1101,7 @@ function showResult(originalText, explanation, provider, language, tone) {
     anthropic: 'Anthropic',
     gemini: 'Gemini',
     groq: 'Groq'
-  })[provider] || 'OpenAI';
+  })[provider] || 'Groq';
   const toneLabels = {
     simple: 'Simple',
     kid: 'Kid-friendly',

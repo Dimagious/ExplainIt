@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  
+  <rect x="0" y="0" width="128" height="128" rx="28" fill="#2563EB"></rect>
+  
+  <rect x="20" y="62" width="88" height="22" rx="3" fill="#60A5FA" opacity="0.9"></rect>
+  
+  <text x="64" y="84" font-family="Inter, -apple-system, BlinkMacSystemFont, &#39;Segoe UI&#39;, sans-serif" font-weight="800" font-size="74" letter-spacing="-3" fill="#FFFFFF" text-anchor="middle">Aa</text>
+</svg>
