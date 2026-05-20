@@ -20,7 +20,7 @@
   "permissions": [
     "storage"
   ],
-  "host_permissions": [
+  "optional_host_permissions": [
     "https://api.openai.com/*",
     "https://api.anthropic.com/*",
     "https://generativelanguage.googleapis.com/*",

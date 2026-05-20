@@ -45,6 +45,34 @@ const PROVIDER_META = {
   groq:      { name: 'Groq',      keyUrl: 'https://console.groq.com/keys',               placeholder: 'gsk_...' }
 };
 
+// Host permissions per provider (matches optional_host_permissions in manifest)
+const PROVIDER_HOSTS = {
+  openai:    'https://api.openai.com/*',
+  anthropic: 'https://api.anthropic.com/*',
+  gemini:    'https://generativelanguage.googleapis.com/*',
+  groq:      'https://api.groq.com/*'
+};
+
+/**
+ * Ensure the user has granted host permission for this provider's API.
+ * Triggers chrome.permissions.request inside the user-gesture context (popup click).
+ * Returns true if granted, false if denied or chrome.permissions is unavailable.
+ */
+async function ensureHostPermission(provider) {
+  const origin = PROVIDER_HOSTS[provider];
+  if (!origin) return true;
+  if (!chrome?.permissions) return true; // older browsers / tests
+
+  try {
+    const has = await chrome.permissions.contains({ origins: [origin] });
+    if (has) return true;
+    return await chrome.permissions.request({ origins: [origin] });
+  } catch (e) {
+    console.warn('[ExplainIt] permission check failed:', e);
+    return true; // fail open — let downstream fetch handle it
+  }
+}
+
 const KEY_STATUS_LABELS = {
   'not-set': 'Not set',
   saved: 'Saved',
@@ -612,6 +640,15 @@ function setupEventListeners() {
         return;
       }
 
+      // Ask for host permission first (optional_host_permissions migration).
+      // This is a click-handler user-gesture context, so chrome.permissions.request
+      // is allowed to surface a native confirmation dialog.
+      const permissionOk = await ensureHostPermission(provider);
+      if (!permissionOk) {
+        setKeyStatusFromKind(provider, 'permission');
+        return;
+      }
+
       setKeyStatus(provider, 'testing');
       testKeyBtn.disabled = true;
       testKeyBtn.textContent = 'Testing...';
@@ -650,6 +687,19 @@ function setupEventListeners() {
       const saveBtn = document.getElementById('save-btn');
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving...';
+
+      // If user is saving a key for this provider, ensure we have the host permission
+      // for that provider's API. Click context = user gesture, so this is allowed.
+      if (currentKey) {
+        const permissionOk = await ensureHostPermission(provider);
+        if (!permissionOk) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Settings';
+          setKeyStatusFromKind(provider, 'permission');
+          showSaveConfirmation('error', `Permission required for ${PROVIDER_META[provider]?.name || provider}. Click Test key and allow.`);
+          return;
+        }
+      }
 
       const result = await saveSettings({ language, tone, provider, apiKeys: mergedKeys });
 
