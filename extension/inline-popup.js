@@ -42,6 +42,19 @@ const INLINE_PROVIDER_META = {
   }
 };
 
+// Inline-popup mirror of popup.js KIND_TO_KEY_COPY — kept inline because
+// content scripts cannot importScripts. Stays in sync with popup.js by convention.
+const INLINE_KIND_TO_KEY_COPY = {
+  auth:       { label: 'Invalid key',       hint: 'Provider rejected this key. Double-check it was copied in full.' },
+  quota:      { label: 'No credit',          hint: 'Key works but the account has no credit. Add billing, or switch to Groq (free).' },
+  rate_limit: { label: 'Rate limited',       hint: 'Provider is throttling. Wait a minute and try again.' },
+  cors:       { label: 'Provider blocked',   hint: 'Provider blocked the request. Update the extension or switch to Groq.' },
+  permission: { label: 'Permission needed',  hint: 'Open the toolbar popup and click Test key to grant access for this provider.' },
+  network:    { label: 'Network error',      hint: 'Check your connection and retry.' },
+  server:     { label: 'Provider down',      hint: 'Provider is temporarily unavailable. Retry shortly.' },
+  unknown:    { label: 'Test failed',        hint: '' }
+};
+
 const INLINE_KEY_STATUS_LABELS = {
   'not-set': 'Not set',
   saved: 'Saved',
@@ -149,8 +162,18 @@ function saveInlineSettings(nextSettings, callback) {
   );
 }
 
-function mapInlineErrorMessage(message = '') {
-  const normalized = message.toLowerCase();
+/**
+ * Convert an explanation-flow error into user-facing copy.
+ * Prefers a typed `kind` from background classifyError; falls back to
+ * keyword scanning for legacy/unclassified errors.
+ */
+function mapInlineErrorMessage(message = '', kind = null) {
+  if (kind && INLINE_KIND_TO_KEY_COPY[kind]) {
+    const copy = INLINE_KIND_TO_KEY_COPY[kind];
+    return `${copy.label}. ${copy.hint}`.trim();
+  }
+
+  const normalized = (message || '').toLowerCase();
 
   if (
     normalized.includes('no api key') ||
@@ -874,12 +897,14 @@ function createInlinePopup(selectedText, options = {}) {
           if (response?.success) {
             setInlineKeyStatus(activeProvider, 'validated');
           } else {
-            const shortError = (response?.error || 'Invalid key').slice(0, 60);
-            setInlineKeyStatus(activeProvider, 'invalid', shortError);
+            // Backend now returns { success: false, kind, error }. Use kind-driven copy.
+            const kind = response?.kind || 'unknown';
+            const copy = INLINE_KIND_TO_KEY_COPY[kind] || INLINE_KIND_TO_KEY_COPY.unknown;
+            setInlineKeyStatus(activeProvider, 'invalid', `${copy.label}. ${copy.hint}`.trim());
           }
         } catch (error) {
-          const shortError = (error?.message || 'Validation failed').slice(0, 60);
-          setInlineKeyStatus(activeProvider, 'invalid', shortError);
+          // Network-level failure (rare — sendMessage rejected).
+          setInlineKeyStatus(activeProvider, 'invalid', INLINE_KIND_TO_KEY_COPY.network.label + '. ' + INLINE_KIND_TO_KEY_COPY.network.hint);
         } finally {
           testKeyBtn.textContent = 'Test key';
           testKeyBtn.disabled = !(keyInput && keyInput.value.trim());
@@ -1023,7 +1048,9 @@ async function fetchExplanation(text) {
     });
     
     if (!response || !response.success) {
-      throw new Error(response?.error || 'Failed to fetch explanation');
+      const err = new Error(response?.error || 'Failed to fetch explanation');
+      err.kind = response?.kind || 'unknown';
+      throw err;
     }
     
     console.log('[InlinePopup] Got explanation from background');
@@ -1037,7 +1064,7 @@ async function fetchExplanation(text) {
   } catch (error) {
     console.error('[InlinePopup] Error:', error);
 
-    showError(mapInlineErrorMessage(error.message), text);
+    showError(mapInlineErrorMessage(error.message, error.kind), text);
   }
 }
 

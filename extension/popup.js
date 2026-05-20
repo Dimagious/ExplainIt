@@ -53,6 +53,18 @@ const KEY_STATUS_LABELS = {
   invalid: 'Invalid'
 };
 
+// Maps a classified error kind from background.js into user-facing chip+hint copy.
+const KIND_TO_KEY_COPY = {
+  auth:       { label: 'Invalid key',        hint: 'The provider rejected this key. Double-check you copied it in full.' },
+  quota:      { label: 'No credit',          hint: 'Key works but the account has no credit. Add billing on the provider dashboard, or switch to Groq (free).' },
+  rate_limit: { label: 'Rate limited',       hint: 'Provider is throttling requests. Wait a minute and try again.' },
+  cors:       { label: 'Provider blocked',   hint: 'Provider blocked the request. Update the extension or switch to Groq.' },
+  permission: { label: 'Permission needed',  hint: 'Click "Test key" and allow access for this provider.' },
+  network:    { label: 'Network error',      hint: 'Check your connection and retry.' },
+  server:     { label: 'Provider down',      hint: 'Provider is temporarily unavailable. Retry shortly.' },
+  unknown:    { label: 'Test failed',        hint: 'Something went wrong. Try again or switch provider.' }
+};
+
 function storageGet(area, keys) {
   return new Promise((resolve, reject) => {
     try {
@@ -290,11 +302,24 @@ function updateKeyStatusUI(providerId = settings.provider) {
   if (!statusEl) return;
 
   const status = keyStatusByProvider[providerId] || 'not-set';
-  const message = keyStatusMessageByProvider[providerId] || '';
+  const fullMessage = keyStatusMessageByProvider[providerId] || '';
   const label = KEY_STATUS_LABELS[status] || KEY_STATUS_LABELS['not-set'];
 
-  statusEl.textContent = message ? `${label}: ${message}` : label;
+  // For 'invalid' state we store a typed override label in `fullMessage` like "Invalid key|hint text".
+  // The chip shows just the short label; the hint goes to the wrapped #api-key-hint element below.
+  const sepIdx = fullMessage.indexOf('|');
+  const chipOverrideLabel = sepIdx >= 0 ? fullMessage.slice(0, sepIdx) : '';
+  const hint              = sepIdx >= 0 ? fullMessage.slice(sepIdx + 1) : fullMessage;
+
+  statusEl.textContent = chipOverrideLabel || label;
   statusEl.className = `key-status ${status}`;
+
+  const hintEl = document.getElementById('api-key-hint');
+  if (hintEl) {
+    hintEl.textContent = hint || '';
+    hintEl.classList.toggle('hidden', !hint);
+    hintEl.classList.toggle('error', status === 'invalid');
+  }
 }
 
 function setKeyStatus(providerId, status, message = '') {
@@ -304,6 +329,15 @@ function setKeyStatus(providerId, status, message = '') {
   if (providerId === settings.provider) {
     updateKeyStatusUI(providerId);
   }
+}
+
+/**
+ * Set 'invalid' key-status using typed copy from KIND_TO_KEY_COPY.
+ * Chip shows the short label; the wrapped #api-key-hint shows the full hint.
+ */
+function setKeyStatusFromKind(providerId, kind) {
+  const copy = KIND_TO_KEY_COPY[kind] || KIND_TO_KEY_COPY.unknown;
+  setKeyStatus(providerId, 'invalid', `${copy.label}|${copy.hint}`);
 }
 
 function updateProviderCardAria() {
@@ -325,7 +359,17 @@ function isKeyRelatedErrorMessage(message = '') {
   );
 }
 
-function mapUserFacingError(message = '', keyRelatedHint = false) {
+function mapUserFacingError(message = '', keyRelatedHint = false, kind = null) {
+  // Kind-driven copy when background classified the error.
+  if (kind && KIND_TO_KEY_COPY[kind]) {
+    const copy = KIND_TO_KEY_COPY[kind];
+    const isKeyRelated = kind === 'auth' || kind === 'quota' || kind === 'permission';
+    return {
+      message: `${copy.label}.\n${copy.hint}`.trim(),
+      isKeyRelated
+    };
+  }
+
   const normalized = message.toLowerCase();
 
   if (isKeyRelatedErrorMessage(message) || keyRelatedHint) {
@@ -580,8 +624,9 @@ function setupEventListeners() {
       if (result.success) {
         setKeyStatus(provider, 'validated');
       } else {
-        const shortError = (result.error || 'Invalid key').slice(0, 60);
-        setKeyStatus(provider, 'invalid', shortError);
+        // Backend returns { success: false, kind, error }. Prefer kind-driven copy.
+        const kind = result.kind || 'unknown';
+        setKeyStatusFromKind(provider, kind);
       }
     });
   }
@@ -775,7 +820,10 @@ async function fetchExplanation(text) {
 
     if (!response?.success) {
       const rawError = response?.error || 'Failed to fetch explanation';
-      throw Object.assign(new Error(rawError), { isNoKeyError: isKeyRelatedErrorMessage(rawError) });
+      throw Object.assign(new Error(rawError), {
+        isNoKeyError: isKeyRelatedErrorMessage(rawError),
+        kind: response?.kind || null
+      });
     }
 
     hideLoadingState();
@@ -791,7 +839,7 @@ async function fetchExplanation(text) {
     }
 
     console.error('[ExplainIt] Error fetching explanation:', error);
-    const mapped = mapUserFacingError(error.message, error.isNoKeyError);
+    const mapped = mapUserFacingError(error.message, error.isNoKeyError, error.kind);
     showErrorState(mapped.message, text, mapped.isKeyRelated);
   } finally {
     abortController = null;

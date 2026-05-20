@@ -83,6 +83,49 @@ async function fetchWithTimeout(url, options = {}) {
   }
 }
 
+/**
+ * Classify a provider/network error into a stable `kind` for UI copy.
+ * Status-first; falls back to message keywords. Returns one of:
+ *   'auth' | 'quota' | 'rate_limit' | 'cors' | 'permission' | 'network' | 'server' | 'unknown'
+ */
+function classifyError(err) {
+  const status = err && typeof err.status === 'number' ? err.status : 0;
+  const msg = ((err && err.message) || '').toLowerCase();
+
+  if (status === 401 || msg.includes('unauthorized') ||
+      msg.includes('invalid api key') || msg.includes('incorrect api key') ||
+      msg.includes('api key not valid')) {
+    return 'auth';
+  }
+  // Quota check BEFORE rate_limit: OpenAI returns HTTP 429 with body
+  // "insufficient_quota" when a paid account has no credit — that's a billing
+  // problem, not a real rate-limit. Telling the user to "wait a minute" would
+  // be wrong; we want them to top up or switch to Groq.
+  if (status === 402 || status === 403 ||
+      msg.includes('quota') || msg.includes('insufficient_quota') ||
+      msg.includes('credit') || msg.includes('billing') || msg.includes('exceeded')) {
+    return 'quota';
+  }
+  if (status === 429 || msg.includes('rate limit') || msg.includes('too many requests')) {
+    return 'rate_limit';
+  }
+  if (msg.includes('cors') || msg.includes('dangerous-direct-browser')) {
+    return 'cors';
+  }
+  if (msg.includes('failed to fetch') || msg.includes('networkerror')) {
+    // Likely missing host permission OR offline; the popup layer can disambiguate
+    // via chrome.permissions.contains. Default to 'network' here.
+    return 'network';
+  }
+  if (msg.includes('timed out') || msg.includes('timeout') || msg.includes('network')) {
+    return 'network';
+  }
+  if (status >= 500) {
+    return 'server';
+  }
+  return 'unknown';
+}
+
 // ─── Provider-specific API callers ───────────────────────────────────────────
 
 /**
@@ -262,6 +305,7 @@ async function fetchExplanationWithResilience(providerId, apiKey, text, tone, la
 
   return {
     success: false,
+    kind: classifyError(lastError || {}),
     error: lastError?.message || 'Failed to fetch explanation'
   };
 }
@@ -300,6 +344,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (!apiKey) {
         sendResponse({
           success: false,
+          kind: 'auth',
           error: 'No API key configured. Open Settings and add your API key.'
         });
         return;
@@ -324,7 +369,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     validateApiKey(providerId, apiKey)
       .then(() => sendResponse({ success: true }))
-      .catch((error) => sendResponse({ success: false, error: error.message || 'Validation failed' }));
+      .catch((error) => sendResponse({
+        success: false,
+        kind: classifyError(error),
+        error: error.message || 'Validation failed'
+      }));
 
     return true;
   }
@@ -374,6 +423,7 @@ console.log('[Background] ExplainIt! service worker initialized (multi-provider 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     buildPrompt,
+    classifyError,
     callOpenAICompatible,
     callAnthropic,
     callGemini,
