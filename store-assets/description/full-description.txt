@@ -1,50 +1,65 @@
-Stuck on a sentence? Highlight it, click ExplainIt, and get a plain-English explanation in seconds — without leaving the page.
+🔍 ExplainIt! — Plain-English explanations of anything on the web
 
-Built for students, non-native English readers, and anyone reading outside their field: contracts, papers, news, docs, Reddit threads, Stack Overflow.
+Highlight any sentence on a webpage, click once, and get a clear explanation right where you're reading — in English, Russian, Spanish, Chinese, Arabic, or 8 more languages.
 
-Free to use with Groq (Llama 3.3 70B) — no credit card. Bring your own key for OpenAI, Gemini, or Claude if you prefer.
+Built for non-native English readers, students, and anyone consuming dense content (legal contracts, academic papers, news analysis, Stack Overflow, Reddit threads) without enough background to follow it word-for-word.
 
-✨ HOW IT WORKS
+Free to use with Groq — no credit card, no signup beyond a single API key.
 
-1. Highlight any text on any webpage
-2. Click the floating ExplainIt icon
-3. Read the explanation in a popup right next to your selection
+---
+
+✨ WHAT'S NEW IN 2.1
+
+• Output in 13 languages: English, Russian, Spanish, Chinese (Simplified), Hindi, Arabic, Portuguese, German, French, Japanese, Korean, Turkish, Vietnamese
+• Right-to-left rendering for Arabic
+• Free Groq tier as the default provider — no credit card required
+• Branched first-run flow with a "Get free key" CTA, so you can be explaining text in 30 seconds
+• Typed error messages — no more truncated technical errors mislabeled as "Invalid key"
+• Friendlier install permissions — provider hosts are requested only when you pick a provider, not at install time
+
+🚀 HOW IT WORKS
+
+1) Select text on any webpage (3–2000 characters)
+2) Click the floating ExplainIt bubble that appears next to your selection
+3) Read the explanation in a popup right there in context
+4) Copy with one click if needed — or switch tone / language and try again
 
 🎯 THREE EXPLANATION DEPTHS
 
-• Simple words — clear plain English for any adult
-• Like I'm 5 — short sentences, no jargon, friendly analogies
+• Simple Words — clear plain English (or your chosen language) for any adult
+• Like I'm 5 — short sentences, no jargon, friendly comparisons
 • Expert — preserves technical terms and key nuance
 
-🌍 EXPLAINS IN YOUR LANGUAGE
+🌍 LANGUAGES (13 supported)
 
-• English
-• Русский (Russian)
+English · Русский · Español · 中文 (简体) · हिन्दी · العربية · Português · Deutsch · Français · 日本語 · 한국어 · Türkçe · Tiếng Việt
 
-Reads English source content. Explains in the language you actually think in.
+Right-to-left scripts (Arabic) render correctly out of the box.
 
 🤖 BRING-YOUR-OWN-PROVIDER
 
-• Groq (Llama 3.3 70B) — Recommended, free tier, no card
-• Google Gemini Flash
-• OpenAI GPT-4o mini
-• Anthropic Claude Haiku
+• Groq (Llama 3.3 70B) — Recommended · free tier · no credit card
+• Google Gemini Flash — pay-as-you-go, roughly $0.0001 per explanation
+• OpenAI GPT-4o mini — pay-as-you-go, roughly $0.0002 per explanation
+• Anthropic Claude Haiku — pay-as-you-go, roughly $0.0003 per explanation
 
-Pick any one. Switch any time. Pay only for what you use.
+Pick one provider. Switch any time. Pay only for what you actually use — typically cents per month for personal reading.
 
 🔒 PRIVACY
 
-• API keys are stored locally on your device — never synced, never sent anywhere except the provider you chose
+• Your API key is stored locally on this device only — never synced to Google, never sent to any ExplainIt server
 • Only text you explicitly select is processed
-• No browsing history collection, no analytics tracking
-• No account, no signup, no email required
+• Selected text is sent only to the AI provider you chose
+• No browsing history collection
+• No analytics, no telemetry, no signup, no email, no account
+• ExplainIt does not run its own backend — there is no ExplainIt server in the loop between you and your chosen provider
 
 🎓 GREAT FOR
 
 • Non-native English readers consuming English content
-• Students reading dense academic material
-• Professionals working through legal contracts, medical reports, or technical docs
-• Anyone who wants to understand a sentence without losing their place on the page
+• Students working through dense academic papers and textbooks
+• Professionals reading contracts, medical reports, or technical docs outside their field
+• Anyone who wants to understand a difficult sentence without losing their place on the page
 
 ---
 

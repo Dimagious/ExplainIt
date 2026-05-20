@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "ExplainIt!",
   "version": "2.1.0",
-  "description": "Instantly explain any selected text in your preferred language and tone",
+  "description": "Highlight any sentence and explain it in your own language — 13 languages. Free with Groq, no credit card.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
