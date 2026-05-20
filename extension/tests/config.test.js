@@ -15,7 +15,9 @@ const {
   validateText,
   escapeHtml,
   PROVIDERS,
-  PROMPTS
+  PROMPTS,
+  META_PROMPTS,
+  LANGUAGE_NAMES
 } = require('../config.js');
 
 // ─── getPrompt ────────────────────────────────────────────────────────────────
@@ -71,11 +73,21 @@ describe('getPrompt', () => {
     expect(prompt).toContain('test');
   });
 
-  test('unknown language falls back to English — does not throw', () => {
+  test('languages without a native template go through the meta-prompt path with target-language steer', () => {
     expect(() => getPrompt('simple', 'fr', 'test')).not.toThrow();
     const prompt = getPrompt('simple', 'fr', 'test');
-    // English fallback should use "Text:"
+    // Meta-prompt instruction is in English ("Text:")
     expect(prompt).toContain('Text:');
+    // Critically, it must name the target language so the LLM actually answers in French.
+    expect(prompt).toContain('French');
+    expect(prompt).toContain('Output ONLY in French');
+  });
+
+  test('completely unknown language code falls back to English target', () => {
+    const prompt = getPrompt('simple', 'xx-fake', 'test');
+    // Should use LANGUAGE_NAMES.en = 'English' as the steer
+    expect(prompt).toContain('English');
+    expect(prompt).not.toContain('xx-fake');
   });
 
   test('text with HTML special characters is NOT escaped in the prompt', () => {
@@ -263,5 +275,71 @@ describe('PROMPTS completeness', () => {
     for (const tone of tones) {
       expect(PROMPTS[tone].en).not.toBe(PROMPTS[tone].ru);
     }
+  });
+});
+
+// ─── Multi-language support (META_PROMPTS + LANGUAGE_NAMES) ──────────────────
+
+describe('META_PROMPTS + LANGUAGE_NAMES', () => {
+  const supportedLangs = [
+    'en', 'ru',                                // native templates
+    'es', 'zh', 'hi', 'ar', 'pt', 'de',        // meta-prompt path
+    'fr', 'ja', 'ko', 'tr', 'vi'
+  ];
+  const tones = ['simple', 'kid', 'expert'];
+
+  test('every supported language has a LANGUAGE_NAMES entry', () => {
+    for (const lang of supportedLangs) {
+      expect(LANGUAGE_NAMES[lang]).toBeTruthy();
+      expect(typeof LANGUAGE_NAMES[lang]).toBe('string');
+    }
+  });
+
+  test('every tone has a META_PROMPTS template with placeholders', () => {
+    for (const tone of tones) {
+      expect(META_PROMPTS[tone]).toBeTruthy();
+      expect(META_PROMPTS[tone]).toContain('{LANGUAGE}');
+      expect(META_PROMPTS[tone]).toContain('{text}');
+    }
+  });
+
+  test('every supported language produces a non-empty prompt for every tone', () => {
+    const userText = 'token-from-test';
+    for (const lang of supportedLangs) {
+      for (const tone of tones) {
+        const prompt = getPrompt(tone, lang, userText);
+        expect(prompt.length).toBeGreaterThan(20);
+        expect(prompt).toContain(userText);
+        expect(prompt).not.toContain('{text}');
+        expect(prompt).not.toContain('{LANGUAGE}');
+      }
+    }
+  });
+
+  test('non-native languages reach the meta-prompt path and name the target language', () => {
+    const cases = [
+      ['es', 'Spanish'],
+      ['zh', 'Chinese (Simplified)'],
+      ['hi', 'Hindi'],
+      ['ar', 'Arabic'],
+      ['pt', 'Portuguese'],
+      ['de', 'German'],
+      ['fr', 'French'],
+      ['ja', 'Japanese'],
+      ['ko', 'Korean'],
+      ['tr', 'Turkish'],
+      ['vi', 'Vietnamese']
+    ];
+    for (const [code, name] of cases) {
+      const prompt = getPrompt('simple', code, 'sample');
+      expect(prompt).toContain(`Output ONLY in ${name}`);
+    }
+  });
+
+  test('native EN/RU paths are NOT affected by the meta-prompt change', () => {
+    // EN native template doesn't contain the meta-prompt's "Output ONLY in" steer
+    expect(getPrompt('simple', 'en', 'x')).not.toContain('Output ONLY in');
+    // RU native template still uses Cyrillic header
+    expect(getPrompt('simple', 'ru', 'x')).toContain('Текст:');
   });
 });

@@ -29,7 +29,9 @@ const PROVIDER_CONFIGS = {
   }
 };
 
-// ─── Prompt templates (inline, mirrors config.js PROMPTS) ────────────────────
+// ─── Prompt templates (inline, mirrors config.js PROMPTS + META_PROMPTS) ─────
+// Native templates: EN and RU (highest quality, human-reviewed).
+// Other languages fall through to META_PROMPTS via buildPrompt().
 
 const PROMPTS = {
   simple: {
@@ -44,6 +46,28 @@ const PROMPTS = {
     en: 'Provide a precise, technical explanation of the following text for a professional audience. Use appropriate terminology and cover key nuances.\n\nText:\n{text}',
     ru: 'Предоставь точное техническое объяснение следующего текста для профессиональной аудитории. Используй соответствующую терминологию и раскрой ключевые нюансы.\n\nТекст:\n{text}'
   }
+};
+
+const META_PROMPTS = {
+  simple: 'Explain the following text in simple words that any adult can understand. Keep it concise (2-4 sentences). Do not use jargon. Output ONLY in {LANGUAGE}.\n\nText:\n{text}',
+  kid:    "Explain the following text as if talking to a 5-year-old child. Use very simple words, short sentences, and a fun comparison if possible. Output ONLY in {LANGUAGE}.\n\nText:\n{text}",
+  expert: 'Provide a precise, technical explanation of the following text for a professional audience. Use appropriate terminology and cover key nuances. Output ONLY in {LANGUAGE}.\n\nText:\n{text}'
+};
+
+const LANGUAGE_NAMES = {
+  en: 'English',
+  ru: 'Russian',
+  es: 'Spanish',
+  zh: 'Chinese (Simplified)',
+  hi: 'Hindi',
+  ar: 'Arabic',
+  pt: 'Portuguese',
+  de: 'German',
+  fr: 'French',
+  ja: 'Japanese',
+  ko: 'Korean',
+  tr: 'Turkish',
+  vi: 'Vietnamese'
 };
 
 const TIMEOUT_MS = 30000;
@@ -61,9 +85,14 @@ function sleep(ms) {
 }
 
 function buildPrompt(text, tone, language) {
-  const tonePrompts = PROMPTS[tone] || PROMPTS.simple;
-  const template = tonePrompts[language] || tonePrompts.en;
-  return template.replace('{text}', text);
+  const tonePrompts = PROMPTS[tone];
+  if (tonePrompts && tonePrompts[language]) {
+    return tonePrompts[language].replace('{text}', text);
+  }
+
+  const meta = META_PROMPTS[tone] || META_PROMPTS.simple;
+  const langName = LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en;
+  return meta.replace('{LANGUAGE}', langName).replace('{text}', text);
 }
 
 async function fetchWithTimeout(url, options = {}) {
@@ -431,6 +460,8 @@ if (typeof module !== 'undefined' && module.exports) {
     fetchExplanationWithResilience,
     validateApiKey,
     PROVIDER_CONFIGS,
-    PROMPTS
+    PROMPTS,
+    META_PROMPTS,
+    LANGUAGE_NAMES
   };
 }
