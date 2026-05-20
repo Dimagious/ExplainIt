@@ -772,8 +772,19 @@ function createInlinePopup(selectedText, options = {}) {
             </label>
             <div class="form-description">Your explanations will be provided in this language.</div>
             <select id="inline-language-select" class="form-select">
-              <option value="en" ${currentSettings.language === 'en' ? 'selected' : ''}>English</option>
-              <option value="ru" ${currentSettings.language === 'ru' ? 'selected' : ''}>Русский</option>
+              <option value="en" ${currentSettings.language === 'en' ? 'selected' : ''}>🇬🇧 English</option>
+              <option value="ru" ${currentSettings.language === 'ru' ? 'selected' : ''}>🇷🇺 Русский</option>
+              <option value="es" ${currentSettings.language === 'es' ? 'selected' : ''}>🇪🇸 Español</option>
+              <option value="zh" ${currentSettings.language === 'zh' ? 'selected' : ''}>🇨🇳 中文 (简体)</option>
+              <option value="hi" ${currentSettings.language === 'hi' ? 'selected' : ''}>🇮🇳 हिन्दी</option>
+              <option value="ar" ${currentSettings.language === 'ar' ? 'selected' : ''}>🇸🇦 العربية</option>
+              <option value="pt" ${currentSettings.language === 'pt' ? 'selected' : ''}>🇵🇹 Português</option>
+              <option value="de" ${currentSettings.language === 'de' ? 'selected' : ''}>🇩🇪 Deutsch</option>
+              <option value="fr" ${currentSettings.language === 'fr' ? 'selected' : ''}>🇫🇷 Français</option>
+              <option value="ja" ${currentSettings.language === 'ja' ? 'selected' : ''}>🇯🇵 日本語</option>
+              <option value="ko" ${currentSettings.language === 'ko' ? 'selected' : ''}>🇰🇷 한국어</option>
+              <option value="tr" ${currentSettings.language === 'tr' ? 'selected' : ''}>🇹🇷 Türkçe</option>
+              <option value="vi" ${currentSettings.language === 'vi' ? 'selected' : ''}>🇻🇳 Tiếng Việt</option>
             </select>
           </div>
           <div class="form-group">
@@ -1095,7 +1106,14 @@ function showResult(originalText, explanation, provider, language, tone) {
   
   const resultArea = popupShadowRoot.querySelector('#inline-result-area');
   if (!resultArea) return;
-  const langLabel = language === 'en' ? '🇬🇧 English' : '🇷🇺 Русский';
+  const INLINE_LANG_LABELS = {
+    en: '🇬🇧 English',  ru: '🇷🇺 Русский',  es: '🇪🇸 Español',
+    zh: '🇨🇳 中文',      hi: '🇮🇳 हिन्दी',    ar: '🇸🇦 العربية',
+    pt: '🇵🇹 Português', de: '🇩🇪 Deutsch',  fr: '🇫🇷 Français',
+    ja: '🇯🇵 日本語',    ko: '🇰🇷 한국어',    tr: '🇹🇷 Türkçe',
+    vi: '🇻🇳 Tiếng Việt'
+  };
+  const langLabel = INLINE_LANG_LABELS[language] || INLINE_LANG_LABELS.en;
   const providerLabel = ({
     openai: 'OpenAI',
     anthropic: 'Anthropic',
@@ -1119,15 +1137,17 @@ function showResult(originalText, explanation, provider, language, tone) {
   
   const originalTextDiv = document.createElement('div');
   originalTextDiv.className = 'original-text';
+  originalTextDiv.setAttribute('dir', 'auto'); // RTL support: browser detects from content
   originalTextDiv.textContent = originalText; // SAFE: textContent prevents XSS
-  
+
   // Explanation section
   const explanationTitle = document.createElement('div');
   explanationTitle.className = 'section-title';
   explanationTitle.textContent = 'Explanation';
-  
+
   const explanationDiv = document.createElement('div');
   explanationDiv.className = 'explanation';
+  explanationDiv.setAttribute('dir', 'auto'); // RTL support for Arabic/Hebrew output
   explanationDiv.textContent = explanation; // SAFE: textContent prevents XSS
   
   // Append all elements

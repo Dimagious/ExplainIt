@@ -125,14 +125,16 @@ describe('validateSettings', () => {
     expect(validateSettings({ provider: 'OPENAI' })).toBe(false); // case-sensitive
   });
 
-  test('accepts valid languages', () => {
-    expect(validateSettings({ language: 'en' })).toBe(true);
-    expect(validateSettings({ language: 'ru' })).toBe(true);
+  test('accepts all 13 supported languages (2.1.0 — 2 native + 11 meta-prompt)', () => {
+    const all = ['en', 'ru', 'es', 'zh', 'hi', 'ar', 'pt', 'de', 'fr', 'ja', 'ko', 'tr', 'vi'];
+    for (const lang of all) {
+      expect(validateSettings({ language: lang })).toBe(true);
+    }
   });
 
-  test('rejects unsupported languages', () => {
-    expect(validateSettings({ language: 'fr' })).toBe(false);
-    expect(validateSettings({ language: 'de' })).toBe(false);
+  test('rejects languages not in the supported list', () => {
+    expect(validateSettings({ language: 'xx' })).toBe(false);
+    expect(validateSettings({ language: 'klingon' })).toBe(false);
     expect(validateSettings({ language: 'EN' })).toBe(false); // case-sensitive
   });
 

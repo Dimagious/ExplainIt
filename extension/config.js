@@ -43,7 +43,11 @@ const PROVIDERS = {
   }
 };
 
-// Prompts for each tone and language
+// ─── Native prompt templates ─────────────────────────────────────────────────
+// One template per (tone, language) pair where we have human-reviewed copy.
+// EN and RU are the original highest-quality prompts and we keep them
+// untouched. Any language NOT listed here falls through to the
+// English meta-prompt path below — see getPrompt().
 const PROMPTS = {
   simple: {
     en: 'Explain the following text in simple words that any adult can understand. Keep it concise (2-4 sentences). Do not use jargon.\n\nText:\n{text}',
@@ -57,6 +61,37 @@ const PROMPTS = {
     en: 'Provide a precise, technical explanation of the following text for a professional audience. Use appropriate terminology and cover key nuances.\n\nText:\n{text}',
     ru: 'Предоставь точное техническое объяснение следующего текста для профессиональной аудитории. Используй соответствующую терминологию и раскрой ключевые нюансы.\n\nТекст:\n{text}'
   }
+};
+
+// ─── Meta-prompts (English instruction, target-language output) ──────────────
+// Used as a fallback for any language without a native template above.
+// All current LLMs (GPT-4o-mini, Claude Haiku, Llama 3.3 70B, Gemini Flash)
+// reliably follow English instructions and produce output in the named
+// target language. The "Output ONLY in {LANGUAGE}" line is the key steer
+// that prevents accidental English output for low-resource languages.
+const META_PROMPTS = {
+  simple: 'Explain the following text in simple words that any adult can understand. Keep it concise (2-4 sentences). Do not use jargon. Output ONLY in {LANGUAGE}.\n\nText:\n{text}',
+  kid:    "Explain the following text as if talking to a 5-year-old child. Use very simple words, short sentences, and a fun comparison if possible. Output ONLY in {LANGUAGE}.\n\nText:\n{text}",
+  expert: 'Provide a precise, technical explanation of the following text for a professional audience. Use appropriate terminology and cover key nuances. Output ONLY in {LANGUAGE}.\n\nText:\n{text}'
+};
+
+// Human-readable language name used by the meta-prompt {LANGUAGE} placeholder.
+// Names are intentionally in English because the meta-prompt is in English —
+// the LLM understands "Spanish" as a target language unambiguously.
+const LANGUAGE_NAMES = {
+  en: 'English',
+  ru: 'Russian',
+  es: 'Spanish',
+  zh: 'Chinese (Simplified)',
+  hi: 'Hindi',
+  ar: 'Arabic',
+  pt: 'Portuguese',
+  de: 'German',
+  fr: 'French',
+  ja: 'Japanese',
+  ko: 'Korean',
+  tr: 'Turkish',
+  vi: 'Vietnamese'
 };
 
 const CONFIG = {
@@ -96,9 +131,16 @@ const CONFIG = {
  * @returns {string} Prompt ready to send to AI
  */
 function getPrompt(tone, language, text) {
-  const tonePrompts = PROMPTS[tone] || PROMPTS.simple;
-  const template = tonePrompts[language] || tonePrompts.en;
-  return template.replace('{text}', text);
+  // Prefer the native template when we have one (EN, RU today).
+  const tonePrompts = PROMPTS[tone];
+  if (tonePrompts && tonePrompts[language]) {
+    return tonePrompts[language].replace('{text}', text);
+  }
+
+  // Fall through to meta-prompt: English instruction + target-language steer.
+  const meta = META_PROMPTS[tone] || META_PROMPTS.simple;
+  const langName = LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en;
+  return meta.replace('{LANGUAGE}', langName).replace('{text}', text);
 }
 
 /**
@@ -183,6 +225,8 @@ globalObj.ExplainItConfig = {
   CONFIG,
   PROVIDERS,
   PROMPTS,
+  META_PROMPTS,
+  LANGUAGE_NAMES,
   getPrompt,
   getProvider,
   validateText,
@@ -197,6 +241,8 @@ if (typeof importScripts !== 'undefined') {
   globalObj.validateText = validateText;
   globalObj.PROVIDERS = PROVIDERS;
   globalObj.PROMPTS = PROMPTS;
+  globalObj.META_PROMPTS = META_PROMPTS;
+  globalObj.LANGUAGE_NAMES = LANGUAGE_NAMES;
   globalObj.CONFIG = CONFIG;
 }
 
@@ -206,6 +252,8 @@ if (typeof module !== 'undefined' && module.exports) {
     CONFIG,
     PROVIDERS,
     PROMPTS,
+    META_PROMPTS,
+    LANGUAGE_NAMES,
     getPrompt,
     getProvider,
     validateText,

@@ -325,7 +325,11 @@ async function saveSettings(newSettings) {
 // ─── Settings: validate ───────────────────────────────────────────────────────
 
 function validateSettings(s) {
-  const validLanguages = ['en', 'ru'];
+  const validLanguages = [
+    'en', 'ru',                              // Native templates (highest quality)
+    'es', 'zh', 'hi', 'ar', 'pt', 'de',      // Meta-prompt path (2.1.0)
+    'fr', 'ja', 'ko', 'tr', 'vi'
+  ];
   const validTones = ['simple', 'kid', 'expert'];
   const validProviders = ['openai', 'anthropic', 'gemini', 'groq'];
 
@@ -468,12 +472,23 @@ const STATUS_PROVIDER_LABELS = {
   gemini:    'Google · Gemini Flash'
 };
 
-// Trimmed to languages the extension actually supports today (en/ru).
-// Multi-language output is scheduled for a separate 2.1.0 release —
-// this map grows when promo templates land for additional languages.
+// Full 13-language coverage as of 2.1.0. EN and RU use native prompt
+// templates; the other 11 reach the meta-prompt path with a target-language
+// steer — see config.js getPrompt() / META_PROMPTS.
 const STATUS_LANGUAGE_LABELS = {
   en: '🇬🇧 English',
-  ru: '🇷🇺 Русский'
+  ru: '🇷🇺 Русский',
+  es: '🇪🇸 Español',
+  zh: '🇨🇳 中文',
+  hi: '🇮🇳 हिन्दी',
+  ar: '🇸🇦 العربية',
+  pt: '🇵🇹 Português',
+  de: '🇩🇪 Deutsch',
+  fr: '🇫🇷 Français',
+  ja: '🇯🇵 日本語',
+  ko: '🇰🇷 한국어',
+  tr: '🇹🇷 Türkçe',
+  vi: '🇻🇳 Tiếng Việt'
 };
 
 /**
@@ -627,7 +642,9 @@ function updateSettingsBadge(usedSettings) {
   if (!badge) return;
 
   const s = usedSettings || settings;
-  const langEmoji = s.language === 'ru' ? '🇷🇺' : '🇬🇧';
+  // STATUS_LANGUAGE_LABELS is "🇫🇷 Français" — extract just the flag for compact badges.
+  const langLabel = STATUS_LANGUAGE_LABELS[s.language] || STATUS_LANGUAGE_LABELS.en;
+  const langEmoji = langLabel.split(' ')[0];
   const toneMap = { simple: 'Simple', kid: "Like I'm 5", expert: 'Expert' };
   const providerName = (PROVIDER_META[s.provider] || PROVIDER_META.openai).name;
 
