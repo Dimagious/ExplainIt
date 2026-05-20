@@ -79,50 +79,73 @@
           </div>
         </div>
 
-        <!-- Empty state (no text selected) -->
-        <div id="empty-state" class="content-section">
-          <div class="empty-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.8">
-              <circle cx="11" cy="11" r="7"></circle>
-              <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
-            </svg>
+        <!--
+          Empty state — branched into two variants by renderEmptyState() in popup.js:
+            data-variant="no-key" → "Get free key" CTA (user has not finished setup)
+            data-variant="ready"  → "Ready" badge + idle instructions (key configured)
+
+          Variant C ("Sample preview") from the design handoff is intentionally
+          omitted in v2.0.2 — its "12 langs" / sub-2-sec claims do not yet match
+          shipped capabilities. Will return once multi-language support lands.
+        -->
+        <div id="empty-state" class="content-section empty-state" data-variant="no-key">
+
+          <!-- Variant A — No API key configured -->
+          <div class="empty-variant" data-show-when="no-key">
+            <div class="empty-key-icon" aria-hidden="true">🔑</div>
+            <h2 class="empty-title">One key, then you're explaining.</h2>
+            <p class="empty-description">
+              Grab a <strong>free Groq key</strong> in 30 seconds — no credit card.
+              Or use OpenAI, Claude, or Gemini.
+            </p>
+            <div class="empty-actions">
+              <button id="empty-get-key-btn" class="btn btn-primary btn-full">
+                Get free key →
+              </button>
+              <button id="empty-have-key-btn" class="btn btn-ghost btn-full">
+                I already have a key
+              </button>
+            </div>
+            <div class="empty-trust-row">
+              <span class="empty-trust-icon" aria-hidden="true">🔒</span>
+              <span>Your key is stored locally on this device. We never see it.</span>
+            </div>
           </div>
-          <h2 class="empty-title">Select text to explain</h2>
-          <p class="empty-description">
-            Highlight any text on a webpage, click the ExplainIt icon,
-            and get an instant AI-powered explanation.
-          </p>
-          <div class="empty-features">
-            <div class="feature">
-              <span class="feature-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="11" cy="11" r="7"></circle>
-                  <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
-                </svg>
-              </span>
-              <span class="feature-text">Fast results</span>
+
+          <!-- Variant B — Ready (key set + setup complete) -->
+          <div class="empty-variant" data-show-when="ready">
+            <div class="status-badge" aria-live="polite">
+              <span class="status-dot" aria-hidden="true"></span>
+              Ready
+              <span class="status-sep">·</span>
+              <span id="status-provider">Groq ⚡</span>
+              <span class="status-sep">·</span>
+              <span id="status-language">🇬🇧 English</span>
             </div>
-            <div class="feature">
-              <span class="feature-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="9"></circle>
-                  <path d="M3 12h18"></path>
-                  <path d="M12 3a15 15 0 0 1 0 18"></path>
-                  <path d="M12 3a15 15 0 0 0 0 18"></path>
+            <h2 class="empty-title">Now go select something hard.</h2>
+            <p class="empty-description">
+              Open any article, highlight a phrase you don't fully follow,
+              and click the floating bubble.
+            </p>
+            <div class="empty-illustration">
+              <div class="empty-illustration-text">
+                drag your cursor across
+                <span class="empty-mark">any English text</span>
+              </div>
+              <div class="empty-illustration-bubble" aria-hidden="true">
+                <svg viewBox="0 0 16 16" width="22" height="22" shape-rendering="geometricPrecision">
+                  <rect x="0" y="0" width="16" height="16" rx="3.5" fill="#2563EB"/>
+                  <rect x="2.2" y="8.4" width="11.6" height="3.2" rx="0.4" fill="#60A5FA"/>
+                  <text x="8" y="11.7"
+                        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+                        font-weight="800" font-size="10.5" letter-spacing="-0.4"
+                        fill="#FFFFFF" text-anchor="middle">Aa</text>
                 </svg>
-              </span>
-              <span class="feature-text">Multi-language</span>
+              </div>
             </div>
-            <div class="feature">
-              <span class="feature-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="9"></circle>
-                  <circle cx="12" cy="12" r="5"></circle>
-                  <circle cx="12" cy="12" r="2"></circle>
-                </svg>
-              </span>
-              <span class="feature-text">3 tone levels</span>
-            </div>
+            <button id="empty-change-tone-btn" class="btn-link-row">
+              Change tone →
+            </button>
           </div>
         </div>
       </main>

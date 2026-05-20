@@ -54,7 +54,17 @@ document.body.innerHTML = `
       <button id="retry-btn"></button>
       <button id="error-settings-btn" class="hidden"></button>
     </div>
-    <div id="empty-state" class="content-section"></div>
+    <div id="empty-state" class="content-section" data-variant="no-key">
+      <div class="empty-variant" data-show-when="no-key">
+        <button id="empty-get-key-btn"></button>
+        <button id="empty-have-key-btn"></button>
+      </div>
+      <div class="empty-variant" data-show-when="ready">
+        <span id="status-provider"></span>
+        <span id="status-language"></span>
+        <button id="empty-change-tone-btn"></button>
+      </div>
+    </div>
     <div id="text-preview"></div>
     <p   id="timeout-warning" class="hidden"></p>
   </div>
@@ -90,7 +100,9 @@ const {
   saveSettings,
   loadSettings,
   onProviderSwitch,
-  fetchExplanation
+  fetchExplanation,
+  renderEmptyState,
+  showState
 } = require('../popup.js');
 
 // Allow init() async chain to settle before any test runs
@@ -449,6 +461,49 @@ describe('setupCompleted: drives first-run gate, sticky once true', () => {
     expect(mockLocalSet).toHaveBeenCalledWith(
       expect.objectContaining({ setupCompleted: true })
     );
+  });
+});
+
+// ─── Empty-state branching ───────────────────────────────────────────────────
+
+describe('renderEmptyState: picks variant from persistedSettings.setupCompleted', () => {
+  test('fresh install (no setupCompleted) → renders no-key variant', async () => {
+    mockSyncGet.mockResolvedValue({});
+    mockLocalGet.mockResolvedValue({});
+    await loadSettings();
+
+    renderEmptyState();
+    const emptyEl = document.getElementById('empty-state');
+    expect(emptyEl.dataset.variant).toBe('no-key');
+  });
+
+  test('user with completed setup → renders ready variant with provider/lang chips', async () => {
+    mockSyncGet.mockResolvedValue({ language: 'ru', tone: 'simple' });
+    mockLocalGet.mockResolvedValue({
+      provider: 'groq',
+      apiKeys: { groq: 'gsk_test-key' },
+      setupCompleted: true
+    });
+    await loadSettings();
+
+    renderEmptyState();
+    const emptyEl = document.getElementById('empty-state');
+    expect(emptyEl.dataset.variant).toBe('ready');
+    expect(document.getElementById('status-provider').textContent).toContain('Groq');
+    expect(document.getElementById('status-language').textContent).toContain('Русский');
+  });
+
+  test('showState("empty") triggers renderEmptyState — variant stays in sync', async () => {
+    mockSyncGet.mockResolvedValue({});
+    mockLocalGet.mockResolvedValue({
+      provider: 'groq',
+      apiKeys: { groq: 'gsk_test' },
+      setupCompleted: true
+    });
+    await loadSettings();
+
+    showState('empty');
+    expect(document.getElementById('empty-state').dataset.variant).toBe('ready');
   });
 });
 });

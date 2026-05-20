@@ -214,6 +214,11 @@ function showState(stateId) {
   if (target) {
     target.classList.remove('hidden');
     currentState = stateId;
+
+    // Refresh branched empty-state variant whenever it becomes visible.
+    if (stateId === 'empty') {
+      renderEmptyState();
+    }
   }
 }
 
@@ -452,6 +457,51 @@ function mapUserFacingError(message = '', keyRelatedHint = false, kind = null) {
     message: message || 'Failed to generate explanation. Please try again.',
     isKeyRelated: false
   };
+}
+
+// ─── Empty-state branching (no-key vs ready) ─────────────────────────────────
+
+const STATUS_PROVIDER_LABELS = {
+  groq:      'Groq ⚡',
+  openai:    'OpenAI · GPT-4o mini',
+  anthropic: 'Anthropic · Claude Haiku',
+  gemini:    'Google · Gemini Flash'
+};
+
+// Trimmed to languages the extension actually supports today (en/ru).
+// Multi-language output is scheduled for a separate 2.1.0 release —
+// this map grows when promo templates land for additional languages.
+const STATUS_LANGUAGE_LABELS = {
+  en: '🇬🇧 English',
+  ru: '🇷🇺 Русский'
+};
+
+/**
+ * Decide which empty-state variant to render based on already-loaded
+ * `persistedSettings`. No new storage round-trip — we keep render in sync
+ * with whatever loadSettings() last produced.
+ *
+ *   - !setupCompleted              → "no-key"  (Get free key CTA)
+ *   - setupCompleted               → "ready"   (status badge + idle copy)
+ */
+function renderEmptyState() {
+  const emptyEl = document.getElementById('empty-state');
+  if (!emptyEl) return;
+
+  if (!persistedSettings.setupCompleted) {
+    emptyEl.dataset.variant = 'no-key';
+    return;
+  }
+
+  emptyEl.dataset.variant = 'ready';
+  paintReadyChips(persistedSettings.provider, persistedSettings.language);
+}
+
+function paintReadyChips(provider, language) {
+  const providerEl = document.getElementById('status-provider');
+  const languageEl = document.getElementById('status-language');
+  if (providerEl) providerEl.textContent = STATUS_PROVIDER_LABELS[provider] || 'AI';
+  if (languageEl) languageEl.textContent = STATUS_LANGUAGE_LABELS[language] || STATUS_LANGUAGE_LABELS.en;
 }
 
 // ─── Settings UI ──────────────────────────────────────────────────────────────
@@ -774,6 +824,37 @@ function setupEventListeners() {
       document.getElementById('welcome-notice')?.classList.remove('hidden');
     });
   }
+
+  // Empty-state "no-key" variant — Get free Groq key in a new tab.
+  const emptyGetKeyBtn = document.getElementById('empty-get-key-btn');
+  if (emptyGetKeyBtn) {
+    emptyGetKeyBtn.addEventListener('click', () => {
+      // Always send users to Groq for the first key: it's free, no card,
+      // and matches the popup's default-provider selection.
+      chrome.tabs.create({ url: PROVIDER_META.groq.keyUrl });
+    });
+  }
+
+  // Empty-state "no-key" variant — user already has a key; jump to Settings.
+  const emptyHaveKeyBtn = document.getElementById('empty-have-key-btn');
+  if (emptyHaveKeyBtn) {
+    emptyHaveKeyBtn.addEventListener('click', () => {
+      draftApiKeys = {};
+      updateSettingsUI();
+      showScreen('settings');
+      document.getElementById('welcome-notice')?.classList.remove('hidden');
+    });
+  }
+
+  // Empty-state "ready" variant — deep-link to Settings (tone picker is there).
+  const emptyChangeToneBtn = document.getElementById('empty-change-tone-btn');
+  if (emptyChangeToneBtn) {
+    emptyChangeToneBtn.addEventListener('click', () => {
+      draftApiKeys = {};
+      updateSettingsUI();
+      showScreen('settings');
+    });
+  }
 }
 
 // ─── Copy ─────────────────────────────────────────────────────────────────────
@@ -1050,6 +1131,7 @@ if (typeof module !== 'undefined' && module.exports) {
     showResult,
     updateSettingsUI,
     showSaveConfirmation,
-    onProviderSwitch
+    onProviderSwitch,
+    renderEmptyState
   };
 }
